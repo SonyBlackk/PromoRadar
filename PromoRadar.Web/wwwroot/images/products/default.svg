@@ -1,0 +1,8 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="420" height="240" viewBox="0 0 420 240" fill="none">
+  <rect width="420" height="240" rx="20" fill="#F8FAFC"/>
+  <rect x="120" y="66" width="180" height="108" rx="14" fill="#E2E8F0"/>
+  <rect x="140" y="86" width="140" height="12" rx="6" fill="#94A3B8"/>
+  <rect x="140" y="108" width="110" height="12" rx="6" fill="#94A3B8"/>
+  <rect x="140" y="130" width="90" height="12" rx="6" fill="#94A3B8"/>
+  <text x="138" y="218" fill="#475569" font-size="24" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700">PRODUTO</text>
+</svg>

@@ -1,0 +1,188 @@
+﻿@using System.Globalization
+@using System.Text.Json
+@model DashboardViewModel
+
+@{
+    ViewData["Title"] = "Home";
+    var ptBr = new CultureInfo("pt-BR");
+    var featured = Model.FeaturedProduct;
+    var downCount = Model.DaySummary.DownCount;
+    var upCount = Model.DaySummary.UpCount;
+    var stableCount = Model.DaySummary.StableCount;
+    var totalDay = Math.Max(1, downCount + upCount + stableCount);
+    var downDeg = (downCount / (double)totalDay) * 360d;
+    var upDeg = (upCount / (double)totalDay) * 360d;
+    var upEnd = downDeg + upDeg;
+    var dayRingStyle = $"background: conic-gradient(#10b981 0deg {downDeg:F1}deg, #fb7185 {downDeg:F1}deg {upEnd:F1}deg, #94a3b8 {upEnd:F1}deg 360deg);";
+}
+
+<div class="dashboard-page">
+    <section class="welcome-block">
+        <h1>Olá, @Model.GreetingName 👋</h1>
+        <p>@Model.GreetingSubtitle</p>
+    </section>
+
+    <section class="summary-grid">
+        @foreach (var card in Model.SummaryCards)
+        {
+            <article class="summary-card @card.AccentClass">
+                <div class="summary-icon">
+                    <i class="bi @card.Icon"></i>
+                </div>
+                <div>
+                    <h2>@card.Title</h2>
+                    <strong>@card.Value</strong>
+                    <p>@card.Subtitle</p>
+                </div>
+            </article>
+        }
+    </section>
+
+    <section class="dashboard-main-grid">
+        <article class="panel-card featured-card">
+            <div class="featured-top">
+                <div class="featured-product-meta">
+                    <div class="featured-image-wrap">
+                        <img src="@featured.ImageUrl" alt="@featured.Name" />
+                    </div>
+
+                    <div>
+                        <h2>@featured.Name</h2>
+                        <div class="featured-store-row">
+                            <span class="store-badge">@featured.StoreBadge</span>
+                            <span>@featured.Store</span>
+                        </div>
+
+                        <div class="featured-prices">
+                            <p>Meta: <strong>@featured.TargetPrice.ToString("C2", ptBr)</strong></p>
+                            <p>Atual: <strong class="price-highlight">@featured.CurrentPrice.ToString("C2", ptBr)</strong></p>
+                        </div>
+
+                        <div class="featured-status">
+                            <span class="delta-badge @(featured.DeltaPercent <= 0 ? "delta-positive" : "delta-negative")">
+                                @featured.DeltaPercent.ToString("+0.0;-0.0", ptBr)%
+                            </span>
+                            <small>@featured.DeltaLabel</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="period-filters" role="tablist" aria-label="Período do gráfico">
+                    <button type="button" class="period-btn is-active" data-period="7D">7D</button>
+                    <button type="button" class="period-btn" data-period="30D">30D</button>
+                    <button type="button" class="period-btn" data-period="90D">90D</button>
+                    <button type="button" class="period-btn" data-period="1A">1A</button>
+                    <button type="button" class="period-btn" data-period="Tudo">Tudo</button>
+                </div>
+            </div>
+
+            <div class="featured-chart-wrap">
+                <canvas id="mainPriceChart"
+                        data-series='@JsonSerializer.Serialize(featured.PriceSeriesByPeriod)'
+                        data-labels='@JsonSerializer.Serialize(featured.LabelsByPeriod7d)'></canvas>
+            </div>
+        </article>
+
+        <aside class="right-widgets">
+            <article class="panel-card widget-card">
+                <header>
+                    <h3>Alertas recentes</h3>
+                    <a asp-controller="Alerts" asp-action="Index">Ver todos</a>
+                </header>
+
+                <ul class="alert-list">
+                    @foreach (var alert in Model.RecentAlerts)
+                    {
+                        <li>
+                            <div class="alert-icon @alert.AccentClass">
+                                <i class="bi @alert.Icon"></i>
+                            </div>
+                            <div>
+                                <strong>@alert.ProductName</strong>
+                                <p>@alert.StoreName</p>
+                                <small>@alert.Note</small>
+                            </div>
+                            <div class="alert-side">
+                                <strong>@alert.Price.ToString("C2", ptBr)</strong>
+                                <small>@alert.TimeAgo</small>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </article>
+
+            <article class="panel-card widget-card">
+                <header>
+                    <h3>Resumo do dia</h3>
+                    <span>@Model.DaySummary.DateLabel</span>
+                </header>
+
+                <div class="day-summary-content">
+                    <div class="day-ring" style="@dayRingStyle">
+                        <div>
+                            <strong>@Model.DaySummary.TotalVariations</strong>
+                            <span>Variações</span>
+                        </div>
+                    </div>
+
+                    <ul class="day-legend">
+                        <li><span class="dot down"></span>Quedas <strong>@Model.DaySummary.DownCount</strong></li>
+                        <li><span class="dot up"></span>Subidas <strong>@Model.DaySummary.UpCount</strong></li>
+                        <li><span class="dot stable"></span>Estáveis <strong>@Model.DaySummary.StableCount</strong></li>
+                    </ul>
+                </div>
+            </article>
+
+            <article class="panel-card widget-card">
+                <header>
+                    <h3>Lojas monitoradas</h3>
+                    <a asp-controller="FavoriteStores" asp-action="Index">Ver todas</a>
+                </header>
+
+                <ul class="store-score-list">
+                    @foreach (var store in Model.StoreScores)
+                    {
+                        <li>
+                            <div class="store-icon">@store.IconText</div>
+                            <span>@store.StoreName</span>
+                            <div class="store-bar">
+                                <span style="width:@store.Score%"></span>
+                            </div>
+                            <strong>@store.Score%</strong>
+                        </li>
+                    }
+                </ul>
+            </article>
+        </aside>
+    </section>
+
+    <section class="panel-card suggestions-block">
+        <header>
+            <h2>Sugestões com preço bom</h2>
+            <a asp-controller="PriceHistory" asp-action="Index">Ver todas</a>
+        </header>
+
+        <div class="suggestions-grid">
+            @foreach (var suggestion in Model.Suggestions)
+            {
+                <article class="suggestion-card">
+                    <img src="@suggestion.ImageUrl" alt="@suggestion.Name" />
+
+                    <span class="suggestion-badge @suggestion.BadgeClass">@suggestion.BadgeText</span>
+
+                    <h3>@suggestion.Name</h3>
+                    <p class="store">@suggestion.StoreName</p>
+                    <strong>@suggestion.Price.ToString("C2", ptBr)</strong>
+                    <p class="comparison">@suggestion.ComparisonText</p>
+
+                    <canvas class="sparkline" data-points='@JsonSerializer.Serialize(suggestion.SparklinePoints)'></canvas>
+                </article>
+            }
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="~/js/dashboard.js" asp-append-version="true"></script>
+}

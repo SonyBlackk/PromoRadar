@@ -1,0 +1,17 @@
+﻿@page
+@model ConfirmEmailModel
+@{
+    ViewData["Title"] = "Confirmação de e-mail";
+}
+
+<div class="auth-card">
+    <h2>Confirmação de e-mail</h2>
+
+    <div class="auth-status @(Model.IsSuccess ? "success" : "warning")">
+        @Model.Message
+    </div>
+
+    <div class="auth-links">
+        <a asp-page="./Login">Ir para login</a>
+    </div>
+</div>

@@ -1,0 +1,15 @@
+﻿@model SectionPageViewModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<section class="module-page-card">
+    <div class="module-page-icon"><i class="bi bi-stars"></i></div>
+    <h1>@Model.Title</h1>
+    <p>@Model.Description</p>
+
+    <div class="module-page-actions">
+        <a class="btn btn-monitor" href="@Model.PrimaryActionUrl">@Model.PrimaryActionText</a>
+        <a class="btn btn-light" asp-controller="Home" asp-action="Index">Voltar ao dashboard</a>
+    </div>
+</section>

@@ -1,0 +1,83 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using PromoRadar.Web.Models
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var activeNav = (ViewData["ActiveNav"] as string ?? string.Empty).ToLowerInvariant();
+    var user = await UserManager.GetUserAsync(User);
+    var displayName = user?.DisplayName ?? "Usuário";
+    var userEmail = user?.Email ?? "usuario@promoradar.local";
+    var planName = user?.PlanName ?? "Plano Gratuito";
+    var initials = user?.AvatarInitials ?? "PR";
+
+    string IsActive(string key) => activeNav == key ? "is-active" : string.Empty;
+}
+
+<div class="sidebar-content">
+    <div class="sidebar-brand">
+        <div class="brand-icon">
+            <i class="bi bi-bullseye"></i>
+        </div>
+        <div>
+            <h1>Promo <span>Radar</span></h1>
+            <p>Caçador de promoções</p>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a class="nav-item @IsActive("home")" asp-controller="Home" asp-action="Index">
+            <i class="bi bi-house-door"></i>
+            <span>Home</span>
+        </a>
+
+        <p class="nav-group">Monitoramento</p>
+
+        <a class="nav-item @IsActive("my-products")" asp-controller="MyProducts" asp-action="Index">
+            <i class="bi bi-box-seam"></i>
+            <span>Minhas Mercadorias</span>
+        </a>
+        <a class="nav-item @IsActive("alerts")" asp-controller="Alerts" asp-action="Index">
+            <i class="bi bi-bell"></i>
+            <span>Alertas</span>
+        </a>
+        <a class="nav-item @IsActive("history")" asp-controller="PriceHistory" asp-action="Index">
+            <i class="bi bi-graph-up-arrow"></i>
+            <span>Histórico de Preços</span>
+        </a>
+
+        <p class="nav-group">Configurações</p>
+
+        <a class="nav-item @IsActive("stores")" asp-controller="FavoriteStores" asp-action="Index">
+            <i class="bi bi-shop-window"></i>
+            <span>Lojas Preferidas</span>
+        </a>
+        <a class="nav-item @IsActive("notifications")" asp-controller="Notifications" asp-action="Index">
+            <i class="bi bi-app-indicator"></i>
+            <span>Notificações</span>
+        </a>
+        <a class="nav-item @IsActive("profile")" asp-controller="Profile" asp-action="Index">
+            <i class="bi bi-person"></i>
+            <span>Perfil</span>
+        </a>
+        <a class="nav-item @IsActive("subscription")" asp-controller="Subscription" asp-action="Index">
+            <i class="bi bi-stars"></i>
+            <span>Assinatura</span>
+        </a>
+    </nav>
+
+    <section class="premium-card">
+        <div class="premium-illustration">🚀</div>
+        <h2>Desbloqueie mais recursos</h2>
+        <p>Tenha varreduras mais rápidas, histórico avançado e alertas inteligentes.</p>
+        <a asp-controller="Subscription" asp-action="Index" class="btn btn-primary w-100">Ver planos</a>
+    </section>
+
+    <section class="sidebar-user-card">
+        <div class="avatar-circle">@initials</div>
+        <div>
+            <strong>@displayName</strong>
+            <p>@userEmail</p>
+            <small>@planName</small>
+        </div>
+    </section>
+</div>

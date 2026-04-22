@@ -1,0 +1,355 @@
+﻿using System.Globalization;
+using Microsoft.EntityFrameworkCore;
+using PromoRadar.Web.Data;
+using PromoRadar.Web.Models;
+using PromoRadar.Web.Models.Enums;
+using PromoRadar.Web.ViewModels.Dashboard;
+
+namespace PromoRadar.Web.Services;
+
+public class DashboardService : IDashboardService
+{
+    private static readonly CultureInfo PtBr = new("pt-BR");
+
+    private readonly ApplicationDbContext _dbContext;
+
+    public DashboardService(ApplicationDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public async Task<DashboardViewModel> GetDashboardAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users.FirstAsync(x => x.Id == userId, cancellationToken);
+
+        var trackedProducts = await _dbContext.UserTrackedProducts
+            .AsNoTracking()
+            .Where(x => x.ApplicationUserId == userId)
+            .Include(x => x.Product)
+            .Include(x => x.Store)
+            .Include(x => x.PriceSnapshots)
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+
+        var alerts = await _dbContext.PriceAlerts
+            .AsNoTracking()
+            .Where(x => x.UserTrackedProduct != null && x.UserTrackedProduct.ApplicationUserId == userId)
+            .Include(x => x.UserTrackedProduct!)
+                .ThenInclude(x => x.Product)
+            .Include(x => x.UserTrackedProduct!)
+                .ThenInclude(x => x.Store)
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .Take(6)
+            .ToListAsync(cancellationToken);
+
+        var featuredTracked = trackedProducts
+            .FirstOrDefault(x => x.Product?.Name.Contains("4070", StringComparison.OrdinalIgnoreCase) == true)
+            ?? trackedProducts.First();
+
+        var featuredSnapshots = featuredTracked.PriceSnapshots
+            .OrderBy(x => x.CapturedAtUtc)
+            .ToList();
+
+        var currentPrice = featuredSnapshots.LastOrDefault()?.Price ?? featuredTracked.TargetPrice;
+        var deltaPercent = featuredTracked.TargetPrice == 0
+            ? 0
+            : Math.Round(((currentPrice - featuredTracked.TargetPrice) / featuredTracked.TargetPrice) * 100, 1);
+
+        var totalEconomy = trackedProducts
+            .Select(x =>
+            {
+                var latest = x.PriceSnapshots.OrderByDescending(s => s.CapturedAtUtc).FirstOrDefault();
+                if (latest is null || x.Product is null)
+                {
+                    return 0m;
+                }
+
+                return Math.Max(0, x.Product.BaselinePrice - latest.Price);
+            })
+            .Sum();
+
+        var cheapProducts = trackedProducts.Count(x =>
+        {
+            var latest = x.PriceSnapshots.OrderByDescending(s => s.CapturedAtUtc).FirstOrDefault();
+            return latest is not null && x.Product is not null && latest.Price <= x.Product.BaselinePrice * 0.92m;
+        });
+
+        var viewModel = new DashboardViewModel
+        {
+            GreetingName = user.DisplayName,
+            GreetingSubtitle = "Aqui estão as melhores oportunidades para você hoje.",
+            SummaryCards =
+            [
+                new SummaryCardViewModel
+                {
+                    Title = "Monitorados",
+                    Icon = "bi-wallet2",
+                    Value = trackedProducts.Count.ToString(PtBr),
+                    Subtitle = "+2 esta semana",
+                    AccentClass = "accent-indigo"
+                },
+                new SummaryCardViewModel
+                {
+                    Title = "Alertas ativos",
+                    Icon = "bi-tags",
+                    Value = alerts.Count.ToString(PtBr),
+                    Subtitle = "Ver alertas",
+                    AccentClass = "accent-mint"
+                },
+                new SummaryCardViewModel
+                {
+                    Title = "Economia total",
+                    Icon = "bi-graph-up-arrow",
+                    Value = totalEconomy.ToString("C2", PtBr),
+                    Subtitle = "Últimos 30 dias",
+                    AccentClass = "accent-orange"
+                },
+                new SummaryCardViewModel
+                {
+                    Title = "Produtos baratos",
+                    Icon = "bi-bar-chart-line",
+                    Value = cheapProducts.ToString(PtBr),
+                    Subtitle = "Oportunidades hoje",
+                    AccentClass = "accent-blue"
+                }
+            ],
+            FeaturedProduct = new FeaturedProductViewModel
+            {
+                Name = featuredTracked.Product?.Name ?? "Produto monitorado",
+                Store = featuredTracked.Store?.Name ?? "Loja",
+                StoreBadge = featuredTracked.Store?.Slug is "amazon-br" ? "a" : GetFirstLetter(featuredTracked.Store?.Name),
+                ImageUrl = featuredTracked.Product?.ImageUrl ?? "/images/products/default.svg",
+                TargetPrice = featuredTracked.TargetPrice,
+                CurrentPrice = currentPrice,
+                DeltaPercent = deltaPercent,
+                DeltaLabel = deltaPercent <= 0 ? "abaixo da meta" : "acima da meta",
+                LastUpdatedLabel = "Atualizado agora",
+                LabelsByPeriod7d = featuredSnapshots.TakeLast(7).Select(x => x.CapturedAtUtc.ToString("dd/MM", PtBr)).ToList(),
+                PriceSeriesByPeriod = BuildPriceSeries(featuredSnapshots)
+            },
+            RecentAlerts = alerts.Take(4).Select(alert => new RecentAlertViewModel
+            {
+                ProductName = alert.UserTrackedProduct?.Product?.Name ?? "Produto",
+                StoreName = alert.UserTrackedProduct?.Store?.Name ?? "Loja",
+                Price = alert.TriggerPrice,
+                Note = alert.Note,
+                TimeAgo = FormatTimeAgo(alert.CreatedAtUtc),
+                Icon = alert.Severity switch
+                {
+                    AlertSeverity.Positive => "bi-graph-up-arrow",
+                    AlertSeverity.Warning => "bi-fire",
+                    AlertSeverity.Critical => "bi-exclamation-triangle",
+                    _ => "bi-bell"
+                },
+                AccentClass = alert.Severity switch
+                {
+                    AlertSeverity.Positive => "positive",
+                    AlertSeverity.Warning => "warning",
+                    AlertSeverity.Critical => "critical",
+                    _ => "neutral"
+                }
+            }).ToList(),
+            DaySummary = BuildDaySummary(trackedProducts),
+            StoreScores = BuildStoreScores(trackedProducts),
+            Suggestions = BuildSuggestions(trackedProducts)
+        };
+
+        return viewModel;
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<decimal>> BuildPriceSeries(IReadOnlyList<PriceSnapshot> snapshots)
+    {
+        var ordered = snapshots.OrderBy(x => x.CapturedAtUtc).ToList();
+
+        var sevenDays = ordered.TakeLast(7).Select(x => x.Price).ToList();
+        var thirtyDays = ordered.TakeLast(30).Select(x => x.Price).ToList();
+
+        var ninetyDays = new List<decimal>();
+        foreach (var item in ordered.TakeLast(30).Chunk(3))
+        {
+            ninetyDays.Add(Math.Round(item.Average(x => x.Price), 2));
+        }
+
+        var oneYear = new List<decimal>();
+        if (thirtyDays.Count > 0)
+        {
+            var start = thirtyDays.First();
+            for (var month = 0; month < 12; month++)
+            {
+                var factor = 0.93m + (month * 0.012m);
+                oneYear.Add(Math.Round(start * factor, 2));
+            }
+        }
+
+        return new Dictionary<string, IReadOnlyList<decimal>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["7D"] = sevenDays,
+            ["30D"] = thirtyDays,
+            ["90D"] = ninetyDays,
+            ["1A"] = oneYear,
+            ["Tudo"] = thirtyDays
+        };
+    }
+
+    private static DaySummaryViewModel BuildDaySummary(IEnumerable<UserTrackedProduct> trackedProducts)
+    {
+        var down = 0;
+        var up = 0;
+        var stable = 0;
+
+        foreach (var tracked in trackedProducts)
+        {
+            var lastTwo = tracked.PriceSnapshots
+                .OrderByDescending(x => x.CapturedAtUtc)
+                .Take(2)
+                .ToList();
+
+            if (lastTwo.Count < 2)
+            {
+                continue;
+            }
+
+            if (lastTwo[0].Price < lastTwo[1].Price)
+            {
+                down++;
+            }
+            else if (lastTwo[0].Price > lastTwo[1].Price)
+            {
+                up++;
+            }
+            else
+            {
+                stable++;
+            }
+        }
+
+        return new DaySummaryViewModel
+        {
+            TotalVariations = down + up + stable,
+            DownCount = down,
+            UpCount = up,
+            StableCount = stable,
+            DateLabel = DateTime.Now.ToString("dd/MM/yyyy", PtBr)
+        };
+    }
+
+    private static IReadOnlyList<StoreScoreViewModel> BuildStoreScores(IEnumerable<UserTrackedProduct> trackedProducts)
+    {
+        return trackedProducts
+            .GroupBy(x => x.Store?.Name ?? "Loja")
+            .Select(group =>
+            {
+                var avgScore = group
+                    .Select(item =>
+                    {
+                        var last = item.PriceSnapshots.OrderByDescending(s => s.CapturedAtUtc).FirstOrDefault();
+                        var baseline = item.Product?.BaselinePrice ?? item.TargetPrice;
+                        if (last is null || baseline <= 0)
+                        {
+                            return 0m;
+                        }
+
+                        return Math.Clamp((baseline - last.Price) / baseline * 100m, -20m, 20m);
+                    })
+                    .DefaultIfEmpty(0)
+                    .Average();
+
+                var score = (int)Math.Clamp(Math.Round(92 + avgScore * 0.4m), 80, 99);
+                var iconText = string.Concat(group.Key
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => x[0]))
+                    .ToUpperInvariant();
+
+                if (string.IsNullOrWhiteSpace(iconText))
+                {
+                    iconText = "ST";
+                }
+
+                return new StoreScoreViewModel
+                {
+                    StoreName = group.Key,
+                    IconText = iconText[..Math.Min(2, iconText.Length)],
+                    Score = score
+                };
+            })
+            .OrderByDescending(x => x.Score)
+            .Take(5)
+            .ToList();
+    }
+
+    private static IReadOnlyList<SuggestionItemViewModel> BuildSuggestions(IEnumerable<UserTrackedProduct> trackedProducts)
+    {
+        return trackedProducts
+            .Select(x =>
+            {
+                var snapshots = x.PriceSnapshots
+                    .OrderByDescending(s => s.CapturedAtUtc)
+                    .Take(8)
+                    .Select(s => s.Price)
+                    .Reverse()
+                    .ToList();
+
+                var latest = snapshots.LastOrDefault();
+                var baseline = x.Product?.BaselinePrice ?? x.TargetPrice;
+                var discountPercent = baseline <= 0 ? 0 : Math.Round((baseline - latest) / baseline * 100, 1);
+
+                var badge = discountPercent switch
+                {
+                    >= 12 => ("Muito bom", "great"),
+                    >= 6 => ("Bom", "good"),
+                    _ => ("Atenção", "attention")
+                };
+
+                var comparisonText = discountPercent > 0
+                    ? $"-{discountPercent.ToString("0.#", PtBr)}% menor que a média"
+                    : "Preço próximo da média";
+
+                return new
+                {
+                    Suggestion = new SuggestionItemViewModel
+                    {
+                        Name = x.Product?.Name ?? "Produto",
+                        StoreName = x.Store?.Name ?? "Loja",
+                        Price = latest,
+                        BadgeText = badge.Item1,
+                        BadgeClass = badge.Item2,
+                        ComparisonText = comparisonText,
+                        ImageUrl = x.Product?.ImageUrl ?? "/images/products/default.svg",
+                        SparklinePoints = snapshots
+                    },
+                    Discount = discountPercent
+                };
+            })
+            .OrderByDescending(x => x.Discount)
+            .Take(4)
+            .Select(x => x.Suggestion)
+            .ToList();
+    }
+
+    private static string FormatTimeAgo(DateTime createdAtUtc)
+    {
+        var elapsed = DateTime.UtcNow - createdAtUtc;
+        if (elapsed.TotalMinutes < 60)
+        {
+            return $"Há {(int)elapsed.TotalMinutes} min";
+        }
+
+        if (elapsed.TotalHours < 24)
+        {
+            return $"Há {(int)elapsed.TotalHours} h";
+        }
+
+        var days = (int)elapsed.TotalDays;
+        return days <= 1 ? "Há 1 dia" : $"Há {days} dias";
+    }
+
+    private static string GetFirstLetter(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "p";
+        }
+
+        return value[..1].ToLowerInvariant();
+    }
+}

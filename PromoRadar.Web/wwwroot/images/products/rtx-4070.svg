@@ -1,0 +1,11 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="420" height="240" viewBox="0 0 420 240" fill="none">
+  <rect width="420" height="240" rx="20" fill="#F5F7FF"/>
+  <rect x="42" y="58" width="336" height="126" rx="16" fill="#DDE5FF" stroke="#A9B9F8" stroke-width="3"/>
+  <circle cx="125" cy="121" r="38" fill="#5062F6"/>
+  <circle cx="210" cy="121" r="38" fill="#5062F6"/>
+  <circle cx="295" cy="121" r="38" fill="#5062F6"/>
+  <circle cx="125" cy="121" r="20" fill="#F8FAFF"/>
+  <circle cx="210" cy="121" r="20" fill="#F8FAFF"/>
+  <circle cx="295" cy="121" r="20" fill="#F8FAFF"/>
+  <text x="40" y="218" fill="#3A4A8B" font-size="24" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700">RTX 4070 SUPER</text>
+</svg>

@@ -1,0 +1,8 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="420" height="240" viewBox="0 0 420 240" fill="none">
+  <rect width="420" height="240" rx="20" fill="#F8FCFF"/>
+  <rect x="132" y="44" width="156" height="152" rx="16" fill="#1F2937"/>
+  <circle cx="210" cy="118" r="44" fill="#111827" stroke="#34D399" stroke-width="4"/>
+  <circle cx="210" cy="118" r="22" fill="#D1FAE5"/>
+  <rect x="170" y="168" width="80" height="10" rx="5" fill="#94A3B8"/>
+  <text x="96" y="218" fill="#0F766E" font-size="24" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700">FONTE CORSAIR 650W</text>
+</svg>
