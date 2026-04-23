@@ -44,16 +44,39 @@ public class DashboardService : IDashboardService
 
         var featuredTracked = trackedProducts
             .FirstOrDefault(x => x.Product?.Name.Contains("4070", StringComparison.OrdinalIgnoreCase) == true)
-            ?? trackedProducts.First();
+            ?? trackedProducts.FirstOrDefault();
 
-        var featuredSnapshots = featuredTracked.PriceSnapshots
-            .OrderBy(x => x.CapturedAtUtc)
-            .ToList();
+        FeaturedProductViewModel featuredProduct;
+        if (featuredTracked is null)
+        {
+            featuredProduct = BuildEmptyFeaturedProduct();
+        }
+        else
+        {
+            var featuredSnapshots = featuredTracked.PriceSnapshots
+                .OrderBy(x => x.CapturedAtUtc)
+                .ToList();
 
-        var currentPrice = featuredSnapshots.LastOrDefault()?.Price ?? featuredTracked.TargetPrice;
-        var deltaPercent = featuredTracked.TargetPrice == 0
-            ? 0
-            : Math.Round(((currentPrice - featuredTracked.TargetPrice) / featuredTracked.TargetPrice) * 100, 1);
+            var currentPrice = featuredSnapshots.LastOrDefault()?.Price ?? featuredTracked.TargetPrice;
+            var deltaPercent = featuredTracked.TargetPrice == 0
+                ? 0
+                : Math.Round(((currentPrice - featuredTracked.TargetPrice) / featuredTracked.TargetPrice) * 100, 1);
+
+            featuredProduct = new FeaturedProductViewModel
+            {
+                Name = featuredTracked.Product?.Name ?? "Produto monitorado",
+                Store = featuredTracked.Store?.Name ?? "Loja",
+                StoreBadge = featuredTracked.Store?.Slug is "amazon-br" ? "a" : GetFirstLetter(featuredTracked.Store?.Name),
+                ImageUrl = featuredTracked.Product?.ImageUrl ?? "/images/products/default.svg",
+                TargetPrice = featuredTracked.TargetPrice,
+                CurrentPrice = currentPrice,
+                DeltaPercent = deltaPercent,
+                DeltaLabel = deltaPercent <= 0 ? "abaixo da meta" : "acima da meta",
+                LastUpdatedLabel = "Atualizado agora",
+                LabelsByPeriod7d = featuredSnapshots.TakeLast(7).Select(x => x.CapturedAtUtc.ToString("dd/MM", PtBr)).ToList(),
+                PriceSeriesByPeriod = BuildPriceSeries(featuredSnapshots)
+            };
+        }
 
         var totalEconomy = trackedProducts
             .Select(x =>
@@ -77,7 +100,9 @@ public class DashboardService : IDashboardService
         var viewModel = new DashboardViewModel
         {
             GreetingName = user.DisplayName,
-            GreetingSubtitle = "Aqui estão as melhores oportunidades para você hoje.",
+            GreetingSubtitle = trackedProducts.Count == 0
+                ? "Vamos começar? Adicione sua primeira mercadoria para monitorar preços."
+                : "Aqui estão as melhores oportunidades para você hoje.",
             SummaryCards =
             [
                 new SummaryCardViewModel
@@ -113,20 +138,7 @@ public class DashboardService : IDashboardService
                     AccentClass = "accent-blue"
                 }
             ],
-            FeaturedProduct = new FeaturedProductViewModel
-            {
-                Name = featuredTracked.Product?.Name ?? "Produto monitorado",
-                Store = featuredTracked.Store?.Name ?? "Loja",
-                StoreBadge = featuredTracked.Store?.Slug is "amazon-br" ? "a" : GetFirstLetter(featuredTracked.Store?.Name),
-                ImageUrl = featuredTracked.Product?.ImageUrl ?? "/images/products/default.svg",
-                TargetPrice = featuredTracked.TargetPrice,
-                CurrentPrice = currentPrice,
-                DeltaPercent = deltaPercent,
-                DeltaLabel = deltaPercent <= 0 ? "abaixo da meta" : "acima da meta",
-                LastUpdatedLabel = "Atualizado agora",
-                LabelsByPeriod7d = featuredSnapshots.TakeLast(7).Select(x => x.CapturedAtUtc.ToString("dd/MM", PtBr)).ToList(),
-                PriceSeriesByPeriod = BuildPriceSeries(featuredSnapshots)
-            },
+            FeaturedProduct = featuredProduct,
             RecentAlerts = alerts.Take(4).Select(alert => new RecentAlertViewModel
             {
                 ProductName = alert.UserTrackedProduct?.Product?.Name ?? "Produto",
@@ -351,5 +363,36 @@ public class DashboardService : IDashboardService
         }
 
         return value[..1].ToLowerInvariant();
+    }
+
+    private static FeaturedProductViewModel BuildEmptyFeaturedProduct()
+    {
+        var labels = Enumerable.Range(0, 7)
+            .Select(offset => DateTime.Now.Date.AddDays(-(6 - offset)).ToString("dd/MM", PtBr))
+            .ToList();
+
+        var emptySeries = new List<decimal> { 0m, 0m, 0m, 0m, 0m, 0m, 0m };
+
+        return new FeaturedProductViewModel
+        {
+            Name = "Nenhuma mercadoria monitorada",
+            Store = "Cadastre seu primeiro produto para começar",
+            StoreBadge = "+",
+            ImageUrl = "/images/products/default.svg",
+            TargetPrice = 0m,
+            CurrentPrice = 0m,
+            DeltaPercent = 0m,
+            DeltaLabel = "Sem dados ainda",
+            LastUpdatedLabel = "Aguardando primeiro monitoramento",
+            LabelsByPeriod7d = labels,
+            PriceSeriesByPeriod = new Dictionary<string, IReadOnlyList<decimal>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["7D"] = emptySeries,
+                ["30D"] = emptySeries,
+                ["90D"] = emptySeries,
+                ["1A"] = emptySeries,
+                ["Tudo"] = emptySeries
+            }
+        };
     }
 }

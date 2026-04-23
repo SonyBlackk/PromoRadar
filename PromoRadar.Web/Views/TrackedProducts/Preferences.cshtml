@@ -1,0 +1,292 @@
+@model TrackedProductPreferencesViewModel
+@{
+    ViewData["Title"] = "Preferências e metas";
+    var preferencesSaved = ViewData["PreferencesSaved"] as bool? == true;
+    var preferencesSavedMessage = ViewData["PreferencesSavedMessage"] as string ?? "Preferências salvas com sucesso.";
+    var flowWarning = TempData["FlowWarning"] as string;
+}
+
+<div class="create-tracked-page preferences-page">
+    <section class="create-header-block">
+        <h1>Monitorar nova mercadoria</h1>
+
+        <nav aria-label="breadcrumb">
+            <ol class="create-breadcrumb">
+                <li><a asp-controller="Home" asp-action="Index">Início</a></li>
+                <li><a asp-controller="MyProducts" asp-action="Index">Minhas Mercadorias</a></li>
+                <li aria-current="page">Monitorar nova mercadoria</li>
+            </ol>
+        </nav>
+    </section>
+
+    <section class="create-stepper-card" aria-label="Fluxo de cadastro">
+        <div class="create-stepper-item">
+            <div class="step-number">1</div>
+            <div>
+                <strong>Informações do produto</strong>
+                <span>Informe o que deseja monitorar</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item is-active">
+            <div class="step-number">2</div>
+            <div>
+                <strong>Preferências e metas</strong>
+                <span>Defina seu preço alvo e alertas</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item">
+            <div class="step-number">3</div>
+            <div>
+                <strong>Lojas para monitorar</strong>
+                <span>Escolha onde buscar ofertas</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item">
+            <div class="step-number">4</div>
+            <div>
+                <strong>Revisão</strong>
+                <span>Confirme e salve o monitoramento</span>
+            </div>
+        </div>
+    </section>
+
+    <div class="create-main-grid">
+        <section class="panel-card create-form-card preferences-form-card">
+            <header>
+                <h2>Preferências e metas</h2>
+                <p>Defina objetivos e configure alertas para este produto.</p>
+            </header>
+
+            @if (preferencesSaved)
+            {
+                <div class="module-feedback success" role="status">
+                    <i class="bi bi-check2-circle"></i>
+                    <span>@preferencesSavedMessage</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(flowWarning))
+            {
+                <div class="module-feedback warning" role="status">
+                    <i class="bi bi-info-circle"></i>
+                    <span>@flowWarning</span>
+                </div>
+            }
+
+            <form asp-action="Preferences" method="post" class="create-product-form preferences-form" novalidate>
+                <div asp-validation-summary="ModelOnly" class="form-global-errors" role="alert"></div>
+
+                <section class="preferences-group">
+                    <h3>Meta de preço</h3>
+                    <p>Informe o preço ideal que você deseja pagar</p>
+
+                    <div class="field-grid-2">
+                        <div class="field-block">
+                            <label asp-for="TargetPrice" class="form-label"></label>
+                            <input asp-for="TargetPrice"
+                                   class="form-control form-control-premium js-money"
+                                   placeholder="2.499,00"
+                                   inputmode="numeric"
+                                   autocomplete="off" />
+                            <span asp-validation-for="TargetPrice" class="text-danger"></span>
+                        </div>
+
+                        <div class="field-block">
+                            <label asp-for="MaximumPrice" class="form-label"></label>
+                            <input asp-for="MaximumPrice"
+                                   class="form-control form-control-premium js-money"
+                                   placeholder="3.199,00"
+                                   inputmode="numeric"
+                                   autocomplete="off" />
+                            <span asp-validation-for="MaximumPrice" class="text-danger"></span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="preferences-group">
+                    <h3>Receba alertas quando o preço estiver:</h3>
+
+                    <div class="alert-trigger-grid">
+                        <label class="alert-trigger-card @(Model.AlertTrigger == PriceAlertTrigger.BelowTarget ? "is-active" : string.Empty)">
+                            @Html.RadioButtonFor(model => model.AlertTrigger, PriceAlertTrigger.BelowTarget, new { @class = "alert-trigger-input" })
+                            <span class="alert-trigger-indicator" aria-hidden="true"></span>
+                            <span class="alert-trigger-copy">
+                                <strong>Abaixo do preço alvo</strong>
+                                <small>Melhor opção para monitorar!</small>
+                            </span>
+                        </label>
+
+                        <label class="alert-trigger-card @(Model.AlertTrigger == PriceAlertTrigger.BelowMaximum ? "is-active" : string.Empty)">
+                            @Html.RadioButtonFor(model => model.AlertTrigger, PriceAlertTrigger.BelowMaximum, new { @class = "alert-trigger-input" })
+                            <span class="alert-trigger-indicator" aria-hidden="true"></span>
+                            <span class="alert-trigger-copy">
+                                <strong>Abaixo do preço máximo</strong>
+                                <small>Alerta até o limite definido</small>
+                            </span>
+                        </label>
+
+                        <label class="alert-trigger-card @(Model.AlertTrigger == PriceAlertTrigger.AnyReduction ? "is-active" : string.Empty)">
+                            @Html.RadioButtonFor(model => model.AlertTrigger, PriceAlertTrigger.AnyReduction, new { @class = "alert-trigger-input" })
+                            <span class="alert-trigger-indicator" aria-hidden="true"></span>
+                            <span class="alert-trigger-copy">
+                                <strong>Qualquer redução</strong>
+                                <small>Me avise sobre qualquer queda</small>
+                            </span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="preferences-group">
+                    <h3>Configurações de alerta</h3>
+
+                    <div class="alert-settings-list">
+                        <div class="alert-setting-row">
+                            <div>
+                                <strong>Alertas por e-mail</strong>
+                                <p>Receba alertas no seu e-mail</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input asp-for="EmailAlerts" class="toggle-input" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="alert-setting-row">
+                            <div>
+                                <strong>Notificações push</strong>
+                                <p>Receba notificações no navegador e celular</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input asp-for="PushNotifications" class="toggle-input" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="alert-setting-row">
+                            <div>
+                                <strong>Resumo diário</strong>
+                                <p>Receba um resumo diário com as melhores ofertas detectadas</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input asp-for="DailySummary" class="toggle-input" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="preferences-actions">
+                    <a asp-action="Create" class="btn btn-outline-secondary btn-back-step">Voltar</a>
+                    <button type="submit" class="btn btn-monitor">
+                        Continuar
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <aside class="panel-card create-helper-card preferences-helper-card">
+            <h3>Dicas para suas metas</h3>
+
+            <ul class="helper-list">
+                <li>
+                    <span class="helper-icon neutral"><i class="bi bi-graph-up-arrow"></i></span>
+                    <div>
+                        <strong>Seja realista</strong>
+                        <p>Pesquise o histórico de preços para definir metas alcançáveis.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="helper-icon mint"><i class="bi bi-envelope-check"></i></span>
+                    <div>
+                        <strong>Considere variações</strong>
+                        <p>Preços podem variar entre lojas e períodos do ano.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="helper-icon indigo"><i class="bi bi-bell"></i></span>
+                    <div>
+                        <strong>Ative múltiplos alertas</strong>
+                        <p>Use diferentes limites para não perder boas oportunidades.</p>
+                    </div>
+                </li>
+            </ul>
+
+            <section class="secure-note">
+                <i class="bi bi-shield-check"></i>
+                <div>
+                    <strong>Seus dados estão seguros</strong>
+                    <p>Monitoramos apenas preços públicos. Seus dados não são compartilhados com terceiros.</p>
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (() => {
+            const moneyInputs = document.querySelectorAll(".js-money");
+
+            const formatMoney = (value) => {
+                const digits = value.replace(/\D/g, "");
+                if (!digits) {
+                    return "";
+                }
+
+                const normalizedValue = Number(digits) / 100;
+                return normalizedValue.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            };
+
+            moneyInputs.forEach((input) => {
+                input.addEventListener("input", () => {
+                    input.value = formatMoney(input.value);
+                });
+
+                if (input.value) {
+                    input.value = formatMoney(input.value);
+                }
+            });
+
+            const cards = document.querySelectorAll(".alert-trigger-card");
+            const syncActiveState = () => {
+                cards.forEach((card) => {
+                    const option = card.querySelector(".alert-trigger-input");
+                    card.classList.toggle("is-active", !!option && option.checked);
+                });
+            };
+
+            cards.forEach((card) => {
+                card.addEventListener("click", () => {
+                    const option = card.querySelector(".alert-trigger-input");
+                    if (!option) {
+                        return;
+                    }
+
+                    option.checked = true;
+                    option.dispatchEvent(new Event("change", { bubbles: true }));
+                });
+            });
+
+            document.querySelectorAll(".alert-trigger-input").forEach((option) => {
+                option.addEventListener("change", syncActiveState);
+            });
+
+            syncActiveState();
+        })();
+    </script>
+}

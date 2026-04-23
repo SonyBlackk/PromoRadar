@@ -1,0 +1,223 @@
+@model CreateTrackedProductStep3ViewModel
+@{
+    ViewData["Title"] = "Lojas para monitorar";
+    var flowWarning = TempData["FlowWarning"] as string;
+}
+
+<div class="create-tracked-page stores-page">
+    <section class="create-header-block">
+        <h1>Monitorar nova mercadoria</h1>
+
+        <nav aria-label="breadcrumb">
+            <ol class="create-breadcrumb">
+                <li><a asp-controller="Home" asp-action="Index">Início</a></li>
+                <li><a asp-controller="MyProducts" asp-action="Index">Minhas Mercadorias</a></li>
+                <li aria-current="page">Monitorar nova mercadoria</li>
+            </ol>
+        </nav>
+    </section>
+
+    <section class="create-stepper-card" aria-label="Fluxo de cadastro">
+        <div class="create-stepper-item">
+            <div class="step-number">1</div>
+            <div>
+                <strong>Informações do produto</strong>
+                <span>Informe o que deseja monitorar</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item">
+            <div class="step-number">2</div>
+            <div>
+                <strong>Preferências e metas</strong>
+                <span>Defina seu preço alvo e alertas</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item is-active">
+            <div class="step-number">3</div>
+            <div>
+                <strong>Lojas para monitorar</strong>
+                <span>Escolha onde buscar ofertas</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item">
+            <div class="step-number">4</div>
+            <div>
+                <strong>Revisão</strong>
+                <span>Confirme e salve o monitoramento</span>
+            </div>
+        </div>
+    </section>
+
+    <div class="create-main-grid stores-main-grid">
+        <section class="panel-card create-form-card stores-form-card">
+            <header>
+                <h2>Lojas para monitorar</h2>
+                <p>Selecione as lojas onde deseja buscar ofertas deste produto</p>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(flowWarning))
+            {
+                <div class="module-feedback warning" role="status">
+                    <i class="bi bi-info-circle"></i>
+                    <span>@flowWarning</span>
+                </div>
+            }
+
+            <form asp-action="Stores" method="post" class="create-product-form stores-form" novalidate>
+                <div asp-validation-summary="ModelOnly" class="form-global-errors" role="alert"></div>
+
+                <div class="stores-search-wrap">
+                    <i class="bi bi-search"></i>
+                    <input type="text"
+                           class="form-control stores-search-input"
+                           id="storeSearchInput"
+                           placeholder="Buscar lojas..."
+                           autocomplete="off" />
+                </div>
+
+                <section class="stores-table" aria-label="Lista de lojas">
+                    <header class="stores-table-head">
+                        <span>Loja</span>
+                        <span>Tipo de loja</span>
+                    </header>
+
+                    <div class="stores-table-body" id="storesTableBody">
+                        @for (var index = 0; index < Model.Stores.Count; index++)
+                        {
+                            <article class="store-row"
+                                     data-store-row
+                                     data-store-search="@($"{Model.Stores[index].Name} {Model.Stores[index].StoreType}".ToLowerInvariant())">
+                                <div class="store-main-col">
+                                    <input type="hidden" asp-for="Stores[index].Key" />
+                                    <input type="hidden" asp-for="Stores[index].Name" />
+                                    <input type="hidden" asp-for="Stores[index].StoreType" />
+                                    <input type="hidden" asp-for="Stores[index].IsRecommended" />
+                                    <input type="hidden" asp-for="Stores[index].LogoText" />
+                                    <input type="hidden" asp-for="Stores[index].LogoVariant" />
+
+                                    <label class="store-check-label" aria-label="Selecionar @Model.Stores[index].Name">
+                                        <input type="checkbox"
+                                               name="Stores[@index].IsSelected"
+                                               value="true"
+                                               class="store-check-input"
+                                               @(Model.Stores[index].IsSelected ? "checked" : null) />
+                                        <span class="store-check-ui">
+                                            <i class="bi bi-check-lg"></i>
+                                        </span>
+                                    </label>
+
+                                    <span class="store-logo store-logo-@Model.Stores[index].LogoVariant">@Model.Stores[index].LogoText</span>
+
+                                    <div class="store-identification">
+                                        <strong>@Model.Stores[index].Name</strong>
+                                        @if (Model.Stores[index].IsRecommended)
+                                        {
+                                            <span class="recommended-pill">Recomendada</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="store-type-col">
+                                    @Model.Stores[index].StoreType
+                                </div>
+                            </article>
+                        }
+                    </div>
+
+                    <div class="stores-empty-state d-none" id="storesEmptyState">
+                        <i class="bi bi-search"></i>
+                        <p>Nenhuma loja encontrada com esse termo.</p>
+                    </div>
+                </section>
+
+                <div class="stores-actions">
+                    <a asp-action="Preferences" class="btn btn-outline-secondary btn-back-step">Voltar</a>
+                    <button type="submit" class="btn btn-monitor">
+                        Continuar
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <aside class="panel-card create-helper-card stores-helper-card">
+            <h3>Dicas sobre lojas</h3>
+
+            <ul class="helper-list">
+                <li>
+                    <span class="helper-icon indigo"><i class="bi bi-bullseye"></i></span>
+                    <div>
+                        <strong>Mais lojas, mais chances</strong>
+                        <p>Monitorar em várias lojas aumenta suas chances de encontrar o melhor preço.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="helper-icon mint"><i class="bi bi-check2-square"></i></span>
+                    <div>
+                        <strong>Lojas recomendadas</strong>
+                        <p>Já selecionamos as principais lojas para você.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="helper-icon orange"><i class="bi bi-bell"></i></span>
+                    <div>
+                        <strong>Você pode alterar depois</strong>
+                        <p>Adicione ou remova lojas a qualquer momento.</p>
+                    </div>
+                </li>
+            </ul>
+
+            <section class="secure-note">
+                <i class="bi bi-shield-check"></i>
+                <div>
+                    <strong>Seus dados estão seguros</strong>
+                    <p>Monitoramos apenas preços públicos. Seus dados não são compartilhados com terceiros.</p>
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (() => {
+            const searchInput = document.getElementById("storeSearchInput");
+            const rows = Array.from(document.querySelectorAll("[data-store-row]"));
+            const emptyState = document.getElementById("storesEmptyState");
+
+            if (!searchInput || rows.length === 0 || !emptyState) {
+                return;
+            }
+
+            const applyFilter = () => {
+                const term = searchInput.value.trim().toLowerCase();
+                let visibleCount = 0;
+
+                rows.forEach((row) => {
+                    const searchContent = row.getAttribute("data-store-search") || "";
+                    const isVisible = term.length === 0 || searchContent.includes(term);
+                    row.classList.toggle("d-none", !isVisible);
+
+                    if (isVisible) {
+                        visibleCount += 1;
+                    }
+                });
+
+                emptyState.classList.toggle("d-none", visibleCount > 0);
+            };
+
+            searchInput.addEventListener("input", applyFilter);
+        })();
+    </script>
+}

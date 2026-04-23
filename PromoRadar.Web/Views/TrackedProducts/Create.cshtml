@@ -1,0 +1,238 @@
+﻿@model CreateTrackedProductViewModel
+@{
+    ViewData["Title"] = "Monitorar nova mercadoria";
+    var flowWarning = TempData["FlowWarning"] as string;
+}
+
+<div class="create-tracked-page">
+    <section class="create-header-block">
+        <h1>Monitorar nova mercadoria</h1>
+
+        <nav aria-label="breadcrumb">
+            <ol class="create-breadcrumb">
+                <li><a asp-controller="Home" asp-action="Index">Home</a></li>
+                <li><a asp-controller="MyProducts" asp-action="Index">Minhas Mercadorias</a></li>
+                <li aria-current="page">Monitorar nova mercadoria</li>
+            </ol>
+        </nav>
+    </section>
+
+    <section class="create-stepper-card" aria-label="Fluxo de cadastro">
+        <div class="create-stepper-item is-active">
+            <div class="step-number">1</div>
+            <div>
+                <strong>Informações do produto</strong>
+                <span>Informe o que deseja monitorar</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item">
+            <div class="step-number">2</div>
+            <div>
+                <strong>Preferências e metas</strong>
+                <span>Defina seu preço alvo e alertas</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item">
+            <div class="step-number">3</div>
+            <div>
+                <strong>Lojas para monitorar</strong>
+                <span>Escolha onde buscar ofertas</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item">
+            <div class="step-number">4</div>
+            <div>
+                <strong>Revisão</strong>
+                <span>Confirme e salve o monitoramento</span>
+            </div>
+        </div>
+    </section>
+
+    <div class="create-main-grid">
+        <section class="panel-card create-form-card">
+            <header>
+                <h2>Informações do produto</h2>
+                <p>Diga-nos qual produto você deseja monitorar.</p>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(flowWarning))
+            {
+                <div class="module-feedback warning" role="status">
+                    <i class="bi bi-info-circle"></i>
+                    <span>@flowWarning</span>
+                </div>
+            }
+
+            <form asp-action="Create" method="post" enctype="multipart/form-data" class="create-product-form" novalidate>
+                <div asp-validation-summary="ModelOnly" class="form-global-errors" role="alert"></div>
+
+                <div class="field-block">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control form-control-premium" placeholder="Ex: Placa de Vídeo RTX 4070 Ti Super" />
+                    <small>Seja específico para melhores resultados.</small>
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="field-grid-2">
+                    <div class="field-block">
+                        <label asp-for="Category" class="form-label"></label>
+                        <select asp-for="Category" class="form-select form-control-premium">
+                            <option value="">Selecione uma categoria</option>
+                            @foreach (var category in Model.CategoryOptions)
+                            {
+                                <option value="@category">@category</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Category" class="text-danger"></span>
+                    </div>
+
+                    <div class="field-block">
+                        <label asp-for="Brand" class="form-label">Marca (opcional)</label>
+                        <input asp-for="Brand" class="form-control form-control-premium" placeholder="Ex: NVIDIA, Corsair, Samsung" />
+                        <span asp-validation-for="Brand" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="field-block">
+                    <label asp-for="Url" class="form-label">URL do produto (opcional)</label>
+                    <input asp-for="Url" class="form-control form-control-premium" placeholder="Cole o link do produto em alguma loja" />
+                    <small>Isso ajuda nosso sistema a identificar o produto exato nas lojas.</small>
+                    <span asp-validation-for="Url" class="text-danger"></span>
+                </div>
+
+                <div class="field-block field-grid-compact">
+                    <div>
+                        <label asp-for="TargetPrice" class="form-label">Preço alvo (opcional)</label>
+                        <input asp-for="TargetPrice" class="form-control form-control-premium" placeholder="Ex: 2399,90" />
+                        <small>Você poderá ajustar metas avançadas nas próximas etapas.</small>
+                        <span asp-validation-for="TargetPrice" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="field-block">
+                    <label asp-for="ImageFile" class="form-label">Imagem do produto (opcional)</label>
+                    <input asp-for="ImageFile" type="file" class="d-none" id="imageFileInput" accept=".png,.jpg,.jpeg,.webp" />
+
+                    <label for="imageFileInput" class="upload-dropzone" id="uploadDropzone">
+                        <i class="bi bi-cloud-arrow-up"></i>
+                        <strong>Clique para enviar ou arraste uma imagem aqui</strong>
+                        <span>PNG, JPG ou WEBP até 5MB</span>
+                        <small id="imageFileLabel">Nenhum arquivo selecionado</small>
+                    </label>
+
+                    <span asp-validation-for="ImageFile" class="text-danger"></span>
+                </div>
+
+                <div class="create-form-actions">
+                    <button type="submit" class="btn btn-monitor">
+                        Continuar
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <aside class="panel-card create-helper-card">
+            <h3>Dicas para um monitoramento eficiente</h3>
+
+            <ul class="helper-list">
+                <li>
+                    <span class="helper-icon indigo"><i class="bi bi-bullseye"></i></span>
+                    <div>
+                        <strong>Seja específico</strong>
+                        <p>Quanto mais detalhes você fornecer, mais precisas serão as ofertas encontradas.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="helper-icon blue"><i class="bi bi-link-45deg"></i></span>
+                    <div>
+                        <strong>Use links de produtos</strong>
+                        <p>Links ajudam nosso sistema a identificar o produto exato nas lojas.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="helper-icon orange"><i class="bi bi-bell"></i></span>
+                    <div>
+                        <strong>Configure alertas</strong>
+                        <p>Defina seu preço alvo para receber alertas quando o preço cair.</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="helper-icon mint"><i class="bi bi-shop-window"></i></span>
+                    <div>
+                        <strong>Monitore múltiplas lojas</strong>
+                        <p>Aumente suas chances de encontrar os melhores preços.</p>
+                    </div>
+                </li>
+            </ul>
+
+            <section class="secure-note">
+                <i class="bi bi-shield-check"></i>
+                <div>
+                    <strong>Seus dados estão seguros</strong>
+                    <p>Monitoramos apenas preços públicos. Seus dados não são compartilhados com terceiros.</p>
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (() => {
+            const fileInput = document.getElementById("imageFileInput");
+            const dropzone = document.getElementById("uploadDropzone");
+            const label = document.getElementById("imageFileLabel");
+
+            if (!fileInput || !dropzone || !label) {
+                return;
+            }
+
+            const updateLabel = (file) => {
+                label.textContent = file ? `Arquivo selecionado: ${file.name}` : "Nenhum arquivo selecionado";
+            };
+
+            fileInput.addEventListener("change", () => {
+                updateLabel(fileInput.files && fileInput.files[0] ? fileInput.files[0] : null);
+            });
+
+            const activate = () => dropzone.classList.add("is-dragover");
+            const deactivate = () => dropzone.classList.remove("is-dragover");
+
+            ["dragenter", "dragover"].forEach((eventName) => {
+                dropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    activate();
+                });
+            });
+
+            ["dragleave", "drop"].forEach((eventName) => {
+                dropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    deactivate();
+                });
+            });
+
+            dropzone.addEventListener("drop", (event) => {
+                const files = event.dataTransfer && event.dataTransfer.files;
+                if (!files || files.length === 0) {
+                    return;
+                }
+
+                fileInput.files = files;
+                updateLabel(files[0]);
+            });
+        })();
+    </script>
+}

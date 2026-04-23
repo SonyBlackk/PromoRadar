@@ -14,8 +14,8 @@ public class MyProductsController : Controller
         {
             Title = "Minhas Mercadorias",
             Description = "Aqui você verá todos os produtos monitorados, metas de preço e performance por loja.",
-            PrimaryActionText = "Adicionar monitoramento",
-            PrimaryActionUrl = "#"
+            PrimaryActionText = "Monitorar nova mercadoria",
+            PrimaryActionUrl = "/TrackedProducts/Create"
         });
     }
 }

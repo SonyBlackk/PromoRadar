@@ -1,9 +1,18 @@
 ﻿@model SectionPageViewModel
 @{
     ViewData["Title"] = Model.Title;
+    var successMessage = TempData["SuccessMessage"] as string;
 }
 
 <section class="module-page-card">
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="module-feedback success">
+            <i class="bi bi-check-circle"></i>
+            <span>@successMessage</span>
+        </div>
+    }
+
     <div class="module-page-icon"><i class="bi bi-stars"></i></div>
     <h1>@Model.Title</h1>
     <p>@Model.Description</p>

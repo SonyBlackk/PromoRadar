@@ -1,0 +1,179 @@
+﻿@model CreateTrackedProductReviewViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Revisão";
+    var ptBr = CultureInfo.GetCultureInfo("pt-BR");
+}
+
+<div class="create-tracked-page review-page">
+    <section class="create-header-block">
+        <h1>Monitorar nova mercadoria</h1>
+
+        <nav aria-label="breadcrumb">
+            <ol class="create-breadcrumb">
+                <li><a asp-controller="Home" asp-action="Index">Início</a></li>
+                <li><a asp-controller="MyProducts" asp-action="Index">Minhas Mercadorias</a></li>
+                <li aria-current="page">Monitorar nova mercadoria</li>
+            </ol>
+        </nav>
+    </section>
+
+    <section class="create-stepper-card" aria-label="Fluxo de cadastro">
+        <div class="create-stepper-item">
+            <div class="step-number">1</div>
+            <div>
+                <strong>Informações do produto</strong>
+                <span>Informe o que deseja monitorar</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item">
+            <div class="step-number">2</div>
+            <div>
+                <strong>Preferências e metas</strong>
+                <span>Defina seu preço alvo e alertas</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item">
+            <div class="step-number">3</div>
+            <div>
+                <strong>Lojas para monitorar</strong>
+                <span>Escolha onde buscar ofertas</span>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="create-stepper-item is-active">
+            <div class="step-number">4</div>
+            <div>
+                <strong>Revisão</strong>
+                <span>Confirme e salve o monitoramento</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel-card review-stage-card">
+        <header class="review-stage-header">
+            <h2>Revisão do monitoramento</h2>
+            <p>Confira todas as informações antes de salvar</p>
+        </header>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="ModelOnly" class="form-global-errors" role="alert"></div>
+        }
+
+        <div class="review-stage-grid">
+            <article class="review-panel review-product-panel">
+                <h3>Produto</h3>
+
+                <div class="review-product-highlight">
+                    <div class="review-product-image-wrap">
+                        <img src="@Model.ProductImageUrl" alt="@Model.ProductName" loading="lazy" />
+                    </div>
+                    <div>
+                        <strong>@Model.ProductName</strong>
+                        <p>@Model.Brand</p>
+                    </div>
+                </div>
+
+                <dl class="review-data-list">
+                    <div>
+                        <dt>Categoria</dt>
+                        <dd>@Model.Category</dd>
+                    </div>
+                    <div>
+                        <dt>Marca</dt>
+                        <dd>@Model.Brand</dd>
+                    </div>
+                    <div>
+                        <dt>URL do produto</dt>
+                        <dd><a href="@Model.ProductUrl" target="_blank" rel="noopener noreferrer">@Model.ProductUrl</a></dd>
+                    </div>
+                    <div>
+                        <dt>Imagem do produto</dt>
+                        <dd>
+                            <div class="review-inline-image">
+                                <img src="@Model.ProductImageUrl" alt="Imagem de @Model.ProductName" loading="lazy" />
+                            </div>
+                        </dd>
+                    </div>
+                </dl>
+            </article>
+
+            <div class="review-middle-column">
+                <article class="review-panel review-preferences-panel">
+                    <h3>Preferências e metas</h3>
+
+                    <div class="review-metric-row">
+                        <span>Preço alvo</span>
+                        <strong>@Model.TargetPrice.ToString("C", ptBr)</strong>
+                    </div>
+
+                    <div class="review-metric-row">
+                        <span>Preço máximo</span>
+                        <strong>@(Model.MaximumPrice?.ToString("C", ptBr) ?? "R$ 3.199,00")</strong>
+                    </div>
+
+                    <hr />
+
+                    <h4>Alertas configurados</h4>
+                    <ul class="review-alert-list">
+                        @foreach (var alert in Model.ConfiguredAlerts.Where(x => x.IsEnabled))
+                        {
+                            <li>
+                                <i class="bi bi-check-lg"></i>
+                                <span>@alert.Label</span>
+                            </li>
+                        }
+                    </ul>
+                </article>
+
+                <article class="review-panel review-stores-panel">
+                    <h3>Lojas para monitorar (@Model.SelectedStores.Count)</h3>
+                    <ul class="review-store-lines">
+                        @foreach (var store in Model.SelectedStores)
+                        {
+                            <li>
+                                <span>@store.Name</span>
+                                <span class="store-logo store-logo-@store.LogoVariant">@store.LogoText</span>
+                            </li>
+                        }
+                    </ul>
+                </article>
+            </div>
+
+            <aside class="review-panel review-ready-panel">
+                <div class="review-rocket-visual">
+                    <i class="bi bi-rocket-takeoff"></i>
+                </div>
+
+                <h3>Pronto para começar!</h3>
+                <p>Seu produto será monitorado em tempo real e você receberá os melhores alertas de preço.</p>
+
+                <section class="review-ready-note">
+                    <i class="bi bi-shield-check"></i>
+                    <p>Você pode editar todas as configurações depois na página do produto.</p>
+                </section>
+            </aside>
+        </div>
+
+        <form asp-action="Review" method="post" class="review-actions-row">
+            <a asp-action="Stores" class="btn btn-outline-secondary btn-back-step">Voltar</a>
+            <button type="submit" class="btn btn-monitor review-submit-btn">
+                Salvar e começar a monitorar
+                <i class="bi bi-check2"></i>
+            </button>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
