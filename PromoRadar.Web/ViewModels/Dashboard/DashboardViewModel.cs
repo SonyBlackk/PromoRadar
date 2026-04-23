@@ -55,7 +55,8 @@ public class FeaturedProductViewModel
     public IReadOnlyDictionary<string, IReadOnlyList<decimal>> PriceSeriesByPeriod { get; set; } =
         new Dictionary<string, IReadOnlyList<decimal>>();
 
-    public IReadOnlyList<string> LabelsByPeriod7d { get; set; } = [];
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> LabelSeriesByPeriod { get; set; } =
+        new Dictionary<string, IReadOnlyList<string>>();
 }
 
 public class RecentAlertViewModel

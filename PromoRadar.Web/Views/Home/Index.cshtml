@@ -65,6 +65,7 @@
                             </span>
                             <small>@featured.DeltaLabel</small>
                         </div>
+                        <small class="featured-updated">@featured.LastUpdatedLabel</small>
                     </div>
                 </div>
 
@@ -80,7 +81,7 @@
             <div class="featured-chart-wrap">
                 <canvas id="mainPriceChart"
                         data-series='@JsonSerializer.Serialize(featured.PriceSeriesByPeriod)'
-                        data-labels='@JsonSerializer.Serialize(featured.LabelsByPeriod7d)'></canvas>
+                        data-label-series='@JsonSerializer.Serialize(featured.LabelSeriesByPeriod)'></canvas>
             </div>
         </article>
 
@@ -164,7 +165,7 @@
 
             <article class="panel-card widget-card">
                 <header>
-                    <h3>Lojas monitoradas</h3>
+                    <h3>Lojas monitoradas (índice estimado)</h3>
                     <a asp-controller="FavoriteStores" asp-action="Index">Ver todas</a>
                 </header>
 

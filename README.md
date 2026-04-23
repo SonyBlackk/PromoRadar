@@ -92,21 +92,37 @@ Update-Database
 
 6. Pressione `F5`.
 
-## Credenciais do usuário demo
+## Seed e hardening de startup
 
-- E-mail: `luiz@promoradar.local`
-- Senha: `PromoRadar@123`
+- Em `Development`, o app aplica migrations, semeia dados de referência e pode criar usuário demo para facilitar o fluxo local.
+- Em ambientes fora de `Development`, por padrão o app **não** executa migration/seed/job automaticamente no startup.
+- O controle fica em `StartupTasks` no `appsettings.json`.
 
-Essas credenciais são criadas automaticamente pelo `DataSeeder` quando o banco está vazio.
+```json
+"StartupTasks": {
+  "ApplyMigrationsOnStartup": false,
+  "SeedReferenceDataOnStartup": false,
+  "SeedDemoDataOnStartup": false,
+  "ScheduleRecurringJobsOnStartup": false
+}
+```
+
+Para desenvolvimento local, `appsettings.Development.json` já habilita esses itens.
+
+### Usuário demo (apenas Development)
+
+- E-mail padrão: `luiz@promoradar.local`
+- Senha: `DevelopmentSeed:DemoPassword` (configurável via `appsettings.Development.json` ou User Secrets)
+- O usuário demo recebe a role `Admin` em `Development` para acesso ao Hangfire Dashboard.
 
 ## Rotas úteis
 
 - Login: `/Identity/Account/Login`
 - Dashboard: `/` (exige login)
-- Hangfire: `/hangfire` (exige login)
+- Hangfire: `/hangfire` (exige login com role `Admin`)
 
 ## Observações técnicas
 
 - `SuggestionItem` **não é entidade persistida** nesta etapa. Ele é montado como projeção no `DashboardService` e exposto via `SuggestionItemViewModel`.
-- A Home usa dados reais de seed para widgets, cards e gráficos (Chart.js).
-- O startup aplica migrations e seed automaticamente quando a conexão com o PostgreSQL está válida.
+- A Home usa dados reais persistidos no banco para séries e indicadores; quando não há histórico, mostra estado vazio explícito.
+- O monitoramento de preço atual usa `IPriceProvider` com implementação `SimulatedPriceProvider` (simulação explícita, preparada para provider real futuro).

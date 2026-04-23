@@ -1,13 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using PromoRadar.Web.Models.Enums;
 
 namespace PromoRadar.Web.ViewModels;
-
-public enum PriceAlertTrigger
-{
-    BelowTarget = 1,
-    BelowMaximum = 2,
-    AnyReduction = 3
-}
 
 public class TrackedProductPreferencesViewModel
 {

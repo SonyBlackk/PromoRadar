@@ -6,7 +6,11 @@ public class Product
 
     public string Name { get; set; } = string.Empty;
 
+    public string NormalizedName { get; set; } = string.Empty;
+
     public string Category { get; set; } = string.Empty;
+
+    public string NormalizedCategory { get; set; } = string.Empty;
 
     public string ImageUrl { get; set; } = string.Empty;
 

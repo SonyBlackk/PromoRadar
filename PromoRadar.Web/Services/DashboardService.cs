@@ -61,6 +61,7 @@ public class DashboardService : IDashboardService
             var deltaPercent = featuredTracked.TargetPrice == 0
                 ? 0
                 : Math.Round(((currentPrice - featuredTracked.TargetPrice) / featuredTracked.TargetPrice) * 100, 1);
+            var (priceSeriesByPeriod, labelSeriesByPeriod) = BuildPriceSeries(featuredSnapshots);
 
             featuredProduct = new FeaturedProductViewModel
             {
@@ -72,9 +73,9 @@ public class DashboardService : IDashboardService
                 CurrentPrice = currentPrice,
                 DeltaPercent = deltaPercent,
                 DeltaLabel = deltaPercent <= 0 ? "abaixo da meta" : "acima da meta",
-                LastUpdatedLabel = "Atualizado agora",
-                LabelsByPeriod7d = featuredSnapshots.TakeLast(7).Select(x => x.CapturedAtUtc.ToString("dd/MM", PtBr)).ToList(),
-                PriceSeriesByPeriod = BuildPriceSeries(featuredSnapshots)
+                LastUpdatedLabel = FormatLastUpdatedLabel(featuredSnapshots.LastOrDefault()?.CapturedAtUtc),
+                LabelSeriesByPeriod = labelSeriesByPeriod,
+                PriceSeriesByPeriod = priceSeriesByPeriod
             };
         }
 
@@ -97,6 +98,8 @@ public class DashboardService : IDashboardService
             return latest is not null && x.Product is not null && latest.Price <= x.Product.BaselinePrice * 0.92m;
         });
 
+        var monitoredThisWeek = trackedProducts.Count(x => x.CreatedAtUtc >= DateTime.UtcNow.AddDays(-7));
+
         var viewModel = new DashboardViewModel
         {
             GreetingName = user.DisplayName,
@@ -110,7 +113,9 @@ public class DashboardService : IDashboardService
                     Title = "Monitorados",
                     Icon = "bi-wallet2",
                     Value = trackedProducts.Count.ToString(PtBr),
-                    Subtitle = "+2 esta semana",
+                    Subtitle = monitoredThisWeek > 0
+                        ? $"+{monitoredThisWeek} nos últimos 7 dias"
+                        : "Sem novos nos últimos 7 dias",
                     AccentClass = "accent-indigo"
                 },
                 new SummaryCardViewModel
@@ -169,38 +174,47 @@ public class DashboardService : IDashboardService
         return viewModel;
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<decimal>> BuildPriceSeries(IReadOnlyList<PriceSnapshot> snapshots)
+    private static (IReadOnlyDictionary<string, IReadOnlyList<decimal>> Prices, IReadOnlyDictionary<string, IReadOnlyList<string>> Labels) BuildPriceSeries(IReadOnlyList<PriceSnapshot> snapshots)
     {
         var ordered = snapshots.OrderBy(x => x.CapturedAtUtc).ToList();
 
-        var sevenDays = ordered.TakeLast(7).Select(x => x.Price).ToList();
-        var thirtyDays = ordered.TakeLast(30).Select(x => x.Price).ToList();
+        var sevenDays = ordered.TakeLast(7).ToList();
+        var thirtyDays = ordered.TakeLast(30).ToList();
+        var ninetyDays = ordered.TakeLast(90).ToList();
 
-        var ninetyDays = new List<decimal>();
-        foreach (var item in ordered.TakeLast(30).Chunk(3))
-        {
-            ninetyDays.Add(Math.Round(item.Average(x => x.Price), 2));
-        }
-
-        var oneYear = new List<decimal>();
-        if (thirtyDays.Count > 0)
-        {
-            var start = thirtyDays.First();
-            for (var month = 0; month < 12; month++)
+        var twelveMonths = ordered
+            .Where(snapshot => snapshot.CapturedAtUtc >= DateTime.UtcNow.AddMonths(-12))
+            .GroupBy(snapshot => new { snapshot.CapturedAtUtc.Year, snapshot.CapturedAtUtc.Month })
+            .OrderBy(group => group.Key.Year)
+            .ThenBy(group => group.Key.Month)
+            .Select(group => new
             {
-                var factor = 0.93m + (month * 0.012m);
-                oneYear.Add(Math.Round(start * factor, 2));
-            }
-        }
+                Label = new DateTime(group.Key.Year, group.Key.Month, 1).ToString("MMM/yy", PtBr),
+                Price = Math.Round(group.Average(snapshot => snapshot.Price), 2, MidpointRounding.AwayFromZero)
+            })
+            .ToList();
 
-        return new Dictionary<string, IReadOnlyList<decimal>>(StringComparer.OrdinalIgnoreCase)
+        var allData = ordered.TakeLast(120).ToList();
+
+        var priceSeries = new Dictionary<string, IReadOnlyList<decimal>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["7D"] = sevenDays,
-            ["30D"] = thirtyDays,
-            ["90D"] = ninetyDays,
-            ["1A"] = oneYear,
-            ["Tudo"] = thirtyDays
+            ["7D"] = sevenDays.Select(snapshot => snapshot.Price).ToList(),
+            ["30D"] = thirtyDays.Select(snapshot => snapshot.Price).ToList(),
+            ["90D"] = ninetyDays.Select(snapshot => snapshot.Price).ToList(),
+            ["1A"] = twelveMonths.Select(month => month.Price).ToList(),
+            ["Tudo"] = allData.Select(snapshot => snapshot.Price).ToList()
         };
+
+        var labelSeries = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["7D"] = sevenDays.Select(snapshot => snapshot.CapturedAtUtc.ToString("dd/MM", PtBr)).ToList(),
+            ["30D"] = thirtyDays.Select(snapshot => snapshot.CapturedAtUtc.ToString("dd/MM", PtBr)).ToList(),
+            ["90D"] = ninetyDays.Select(snapshot => snapshot.CapturedAtUtc.ToString("dd/MM", PtBr)).ToList(),
+            ["1A"] = twelveMonths.Select(month => month.Label).ToList(),
+            ["Tudo"] = allData.Select(snapshot => snapshot.CapturedAtUtc.ToString("dd/MM", PtBr)).ToList()
+        };
+
+        return (priceSeries, labelSeries);
     }
 
     private static DaySummaryViewModel BuildDaySummary(IEnumerable<UserTrackedProduct> trackedProducts)
@@ -302,8 +316,8 @@ public class DashboardService : IDashboardService
                     .ToList();
 
                 var latest = snapshots.LastOrDefault();
-                var baseline = x.Product?.BaselinePrice ?? x.TargetPrice;
-                var discountPercent = baseline <= 0 ? 0 : Math.Round((baseline - latest) / baseline * 100, 1);
+                var average = snapshots.Count == 0 ? x.TargetPrice : snapshots.Average();
+                var discountPercent = average <= 0 ? 0 : Math.Round((average - latest) / average * 100, 1);
 
                 var badge = discountPercent switch
                 {
@@ -313,8 +327,8 @@ public class DashboardService : IDashboardService
                 };
 
                 var comparisonText = discountPercent > 0
-                    ? $"-{discountPercent.ToString("0.#", PtBr)}% menor que a média"
-                    : "Preço próximo da média";
+                    ? $"-{discountPercent.ToString("0.#", PtBr)}% abaixo da média recente"
+                    : "Preço acima da média recente";
 
                 return new
                 {
@@ -355,6 +369,32 @@ public class DashboardService : IDashboardService
         return days <= 1 ? "Há 1 dia" : $"Há {days} dias";
     }
 
+    private static string FormatLastUpdatedLabel(DateTime? capturedAtUtc)
+    {
+        if (!capturedAtUtc.HasValue)
+        {
+            return "Sem leituras ainda";
+        }
+
+        var elapsed = DateTime.UtcNow - capturedAtUtc.Value;
+        if (elapsed.TotalMinutes < 1)
+        {
+            return "Atualizado agora";
+        }
+
+        if (elapsed.TotalMinutes < 60)
+        {
+            return $"Atualizado há {(int)elapsed.TotalMinutes} min";
+        }
+
+        if (elapsed.TotalHours < 24)
+        {
+            return $"Atualizado há {(int)elapsed.TotalHours} h";
+        }
+
+        return $"Atualizado há {(int)elapsed.TotalDays} dia(s)";
+    }
+
     private static string GetFirstLetter(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -367,11 +407,26 @@ public class DashboardService : IDashboardService
 
     private static FeaturedProductViewModel BuildEmptyFeaturedProduct()
     {
-        var labels = Enumerable.Range(0, 7)
+        var labels7d = Enumerable.Range(0, 7)
             .Select(offset => DateTime.Now.Date.AddDays(-(6 - offset)).ToString("dd/MM", PtBr))
             .ToList();
 
-        var emptySeries = new List<decimal> { 0m, 0m, 0m, 0m, 0m, 0m, 0m };
+        var labels30d = Enumerable.Range(0, 30)
+            .Select(offset => DateTime.Now.Date.AddDays(-(29 - offset)).ToString("dd/MM", PtBr))
+            .ToList();
+
+        var labels90d = Enumerable.Range(0, 90)
+            .Select(offset => DateTime.Now.Date.AddDays(-(89 - offset)).ToString("dd/MM", PtBr))
+            .ToList();
+
+        var labels1y = Enumerable.Range(0, 12)
+            .Select(offset => DateTime.Now.Date.AddMonths(-(11 - offset)).ToString("MMM/yy", PtBr))
+            .ToList();
+
+        var empty7 = Enumerable.Repeat(0m, 7).ToList();
+        var empty30 = Enumerable.Repeat(0m, 30).ToList();
+        var empty90 = Enumerable.Repeat(0m, 90).ToList();
+        var empty1y = Enumerable.Repeat(0m, 12).ToList();
 
         return new FeaturedProductViewModel
         {
@@ -384,14 +439,21 @@ public class DashboardService : IDashboardService
             DeltaPercent = 0m,
             DeltaLabel = "Sem dados ainda",
             LastUpdatedLabel = "Aguardando primeiro monitoramento",
-            LabelsByPeriod7d = labels,
+            LabelSeriesByPeriod = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["7D"] = labels7d,
+                ["30D"] = labels30d,
+                ["90D"] = labels90d,
+                ["1A"] = labels1y,
+                ["Tudo"] = labels30d
+            },
             PriceSeriesByPeriod = new Dictionary<string, IReadOnlyList<decimal>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["7D"] = emptySeries,
-                ["30D"] = emptySeries,
-                ["90D"] = emptySeries,
-                ["1A"] = emptySeries,
-                ["Tudo"] = emptySeries
+                ["7D"] = empty7,
+                ["30D"] = empty30,
+                ["90D"] = empty90,
+                ["1A"] = empty1y,
+                ["Tudo"] = empty30
             }
         };
     }

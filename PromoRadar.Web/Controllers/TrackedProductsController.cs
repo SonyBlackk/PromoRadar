@@ -3,9 +3,9 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PromoRadar.Web.Data;
 using PromoRadar.Web.Models;
+using PromoRadar.Web.Models.Enums;
+using PromoRadar.Web.Services;
 using PromoRadar.Web.ViewModels;
 
 namespace PromoRadar.Web.Controllers;
@@ -14,19 +14,10 @@ namespace PromoRadar.Web.Controllers;
 public class TrackedProductsController : Controller
 {
     private static readonly CultureInfo PtBr = new("pt-BR");
-    private const long MaxImageSizeBytes = 5 * 1024 * 1024;
 
     private const string CreateDraftTempDataKey = "TrackedProducts.CreateDraft";
     private const string PreferencesDraftTempDataKey = "TrackedProducts.PreferencesDraft";
     private const string StoresDraftTempDataKey = "TrackedProducts.StoresDraft";
-
-    private static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".webp"
-    };
 
     private static readonly IReadOnlyList<string> Categories =
     [
@@ -60,15 +51,18 @@ public class TrackedProductsController : Controller
         "magazine-luiza"
     };
 
-    private readonly ApplicationDbContext _dbContext;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IWebHostEnvironment _environment;
+    private readonly ITrackedProductCreationService _trackedProductCreationService;
+    private readonly IProductImageService _productImageService;
 
-    public TrackedProductsController(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IWebHostEnvironment environment)
+    public TrackedProductsController(
+        UserManager<ApplicationUser> userManager,
+        ITrackedProductCreationService trackedProductCreationService,
+        IProductImageService productImageService)
     {
-        _dbContext = dbContext;
         _userManager = userManager;
-        _environment = environment;
+        _trackedProductCreationService = trackedProductCreationService;
+        _productImageService = productImageService;
     }
 
     [HttpGet]
@@ -98,7 +92,13 @@ public class TrackedProductsController : Controller
         model.CategoryOptions = Categories;
 
         ValidateUrl(model.Url);
-        ValidateImageFile(model.ImageFile);
+        var uploadResult = await _productImageService.SaveAsync(model.ImageFile, cancellationToken);
+        if (!uploadResult.IsValid)
+        {
+            ModelState.AddModelError(
+                nameof(CreateTrackedProductViewModel.ImageFile),
+                uploadResult.ErrorMessage ?? "Não foi possível validar a imagem enviada.");
+        }
 
         if (!ModelState.IsValid)
         {
@@ -106,7 +106,6 @@ public class TrackedProductsController : Controller
         }
 
         var currentDraft = GetDraftFromTempData<CreateTrackedProductDraft>(CreateDraftTempDataKey);
-        var uploadedImageUrl = await SaveImageAsync(model.ImageFile, cancellationToken);
 
         SaveDraftToTempData(CreateDraftTempDataKey, new CreateTrackedProductDraft
         {
@@ -115,7 +114,7 @@ public class TrackedProductsController : Controller
             Brand = string.IsNullOrWhiteSpace(model.Brand) ? null : model.Brand.Trim(),
             Url = string.IsNullOrWhiteSpace(model.Url) ? null : model.Url.Trim(),
             TargetPrice = model.TargetPrice,
-            ImageUrl = uploadedImageUrl ?? currentDraft?.ImageUrl ?? "/images/products/default.svg"
+            ImageUrl = uploadResult.ImageUrl ?? currentDraft?.ImageUrl ?? "/images/products/default.svg"
         });
 
         RemoveDraftFromTempData(PreferencesDraftTempDataKey);
@@ -161,48 +160,12 @@ public class TrackedProductsController : Controller
             return RedirectToAction(nameof(Create));
         }
 
-        if (!TryParseMoney(model.TargetPrice, out var targetPrice) || targetPrice <= 0)
-        {
-            ModelState.AddModelError(nameof(TrackedProductPreferencesViewModel.TargetPrice), "Informe um preço alvo válido.");
-        }
-
-        decimal? maximumPrice = null;
-        if (!string.IsNullOrWhiteSpace(model.MaximumPrice))
-        {
-            if (!TryParseMoney(model.MaximumPrice, out var parsedMaximum) || parsedMaximum <= 0)
-            {
-                ModelState.AddModelError(nameof(TrackedProductPreferencesViewModel.MaximumPrice), "Informe um preço máximo válido.");
-            }
-            else
-            {
-                maximumPrice = parsedMaximum;
-            }
-        }
-
-        if (model.AlertTrigger == PriceAlertTrigger.BelowMaximum && maximumPrice is null)
-        {
-            ModelState.AddModelError(nameof(TrackedProductPreferencesViewModel.MaximumPrice), "Para este tipo de alerta, informe o preço máximo.");
-        }
-
-        if (maximumPrice is not null && targetPrice > maximumPrice)
-        {
-            ModelState.AddModelError(nameof(TrackedProductPreferencesViewModel.MaximumPrice), "O preço máximo deve ser maior ou igual ao preço alvo.");
-        }
-
-        if (!ModelState.IsValid)
+        if (!TryBuildPreferencesDraft(model, out var preferencesDraft))
         {
             return View(model);
         }
 
-        SaveDraftToTempData(PreferencesDraftTempDataKey, new TrackedProductPreferencesDraft
-        {
-            TargetPrice = targetPrice,
-            MaximumPrice = maximumPrice,
-            AlertTrigger = model.AlertTrigger,
-            EmailAlerts = model.EmailAlerts,
-            PushNotifications = model.PushNotifications,
-            DailySummary = model.DailySummary
-        });
+        SaveDraftToTempData(PreferencesDraftTempDataKey, preferencesDraft!);
 
         return RedirectToAction(nameof(Stores));
     }
@@ -308,128 +271,48 @@ public class TrackedProductsController : Controller
             return View(invalidVm);
         }
 
-        var normalizedName = createDraft!.Name.Trim();
-        var normalizedCategory = createDraft.Category.Trim();
-        var normalizedNameLower = normalizedName.ToLower();
-        var normalizedCategoryLower = normalizedCategory.ToLower();
-        var productImageUrl = string.IsNullOrWhiteSpace(createDraft.ImageUrl) ? "/images/products/default.svg" : createDraft.ImageUrl;
-
-        var product = await _dbContext.Products.FirstOrDefaultAsync(
-            productEntity =>
-                productEntity.Name.ToLower() == normalizedNameLower &&
-                productEntity.Category.ToLower() == normalizedCategoryLower,
-            cancellationToken);
-
-        if (product is null)
-        {
-            product = new Product
-            {
-                Id = Guid.NewGuid(),
-                Name = normalizedName,
-                Category = normalizedCategory,
-                ImageUrl = productImageUrl,
-                BaselinePrice = preferencesDraft!.TargetPrice
-            };
-
-            _dbContext.Products.Add(product);
-        }
-        else
-        {
-            if (string.Equals(product.ImageUrl, "/images/products/default.svg", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(productImageUrl, "/images/products/default.svg", StringComparison.OrdinalIgnoreCase))
-            {
-                product.ImageUrl = productImageUrl;
-            }
-
-            if (product.BaselinePrice <= 0)
-            {
-                product.BaselinePrice = preferencesDraft!.TargetPrice;
-            }
-        }
-
-        var selectedKeys = storesDraft.SelectedStoreKeys
+        var templatesByKey = AvailableStores.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
+        var selectedStores = storesDraft.SelectedStoreKeys
             .Where(key => !string.IsNullOrWhiteSpace(key))
-            .Select(key => key.Trim().ToLowerInvariant())
-            .Distinct()
+            .Select(key =>
+            {
+                var normalizedKey = key.Trim().ToLowerInvariant();
+                var template = templatesByKey.TryGetValue(normalizedKey, out var storeTemplate)
+                    ? storeTemplate
+                    : new StoreTemplate(normalizedKey, normalizedKey, "Marketplace", false, normalizedKey[..1], "neutral", "#5b57f3");
+
+                return new TrackedStoreRequest
+                {
+                    Key = template.Key,
+                    Name = template.Name,
+                    AccentColor = template.AccentColor
+                };
+            })
             .ToList();
 
-        var templatesByKey = AvailableStores.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
-        var stores = await _dbContext.Stores
-            .Where(store => selectedKeys.Contains(store.Slug))
-            .ToDictionaryAsync(store => store.Slug, StringComparer.OrdinalIgnoreCase, cancellationToken);
-
-        foreach (var key in selectedKeys)
-        {
-            if (stores.ContainsKey(key))
+        var creationResult = await _trackedProductCreationService.CreateAsync(
+            userId,
+            new TrackedProductCreationRequest
             {
-                continue;
-            }
-
-            var template = templatesByKey.TryGetValue(key, out var storeTemplate)
-                ? storeTemplate
-                : new StoreTemplate(key, key, "Marketplace", false, key[..1], "neutral", "#5b57f3");
-
-            var newStore = new Store
-            {
-                Id = Guid.NewGuid(),
-                Name = template.Name,
-                Slug = template.Key,
-                AccentColor = template.AccentColor
-            };
-
-            _dbContext.Stores.Add(newStore);
-            stores[key] = newStore;
-        }
-
-        var selectedStoreIds = stores.Values.Select(store => store.Id).ToList();
-        var existingStoreIds = await _dbContext.UserTrackedProducts
-            .Where(tracked =>
-                tracked.ApplicationUserId == userId &&
-                tracked.ProductId == product.Id &&
-                tracked.IsActive &&
-                selectedStoreIds.Contains(tracked.StoreId))
-            .Select(tracked => tracked.StoreId)
-            .ToHashSetAsync(cancellationToken);
-
-        var createdCount = 0;
-        foreach (var store in stores.Values)
-        {
-            if (existingStoreIds.Contains(store.Id))
-            {
-                continue;
-            }
-
-            var trackedProduct = new UserTrackedProduct
-            {
-                Id = Guid.NewGuid(),
-                ApplicationUserId = userId,
-                ProductId = product.Id,
-                StoreId = store.Id,
+                ProductName = createDraft!.Name,
+                ProductCategory = createDraft.Category,
+                ProductImageUrl = createDraft.ImageUrl,
                 TargetPrice = preferencesDraft!.TargetPrice,
-                IsActive = true,
-                CreatedAtUtc = DateTime.UtcNow
-            };
-
-            _dbContext.UserTrackedProducts.Add(trackedProduct);
-            _dbContext.PriceSnapshots.Add(new PriceSnapshot
-            {
-                Id = Guid.NewGuid(),
-                UserTrackedProductId = trackedProduct.Id,
-                Price = preferencesDraft.TargetPrice,
-                CapturedAtUtc = DateTime.UtcNow
-            });
-
-            createdCount += 1;
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
+                MaximumPrice = preferencesDraft.MaximumPrice,
+                AlertTrigger = preferencesDraft.AlertTrigger,
+                EmailAlerts = preferencesDraft.EmailAlerts,
+                PushNotifications = preferencesDraft.PushNotifications,
+                DailySummary = preferencesDraft.DailySummary,
+                Stores = selectedStores
+            },
+            cancellationToken);
 
         RemoveDraftFromTempData(CreateDraftTempDataKey);
         RemoveDraftFromTempData(PreferencesDraftTempDataKey);
         RemoveDraftFromTempData(StoresDraftTempDataKey);
 
-        TempData["SuccessMessage"] = createdCount > 0
-            ? $"Monitoramento criado com sucesso em {createdCount} loja(s)."
+        TempData["SuccessMessage"] = creationResult.CreatedCount > 0
+            ? $"Monitoramento criado com sucesso em {creationResult.CreatedCount} loja(s)."
             : "As lojas selecionadas já estavam sendo monitoradas para este produto.";
 
         return RedirectToAction("Index", "MyProducts");
@@ -567,54 +450,61 @@ public class TrackedProductsController : Controller
             return;
         }
 
-        if (!Uri.TryCreate(url, UriKind.Absolute, out _))
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var parsedUri) ||
+            (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps))
         {
             ModelState.AddModelError(nameof(CreateTrackedProductViewModel.Url), "Informe uma URL válida, incluindo http:// ou https://.");
         }
     }
 
-    private void ValidateImageFile(IFormFile? imageFile)
+    private bool TryBuildPreferencesDraft(TrackedProductPreferencesViewModel model, out TrackedProductPreferencesDraft? draft)
     {
-        if (imageFile is null || imageFile.Length == 0)
+        draft = null;
+
+        if (!TryParseMoney(model.TargetPrice, out var targetPrice) || targetPrice <= 0)
         {
-            return;
+            ModelState.AddModelError(nameof(TrackedProductPreferencesViewModel.TargetPrice), "Informe um preço alvo válido.");
         }
 
-        if (imageFile.Length > MaxImageSizeBytes)
+        decimal? maximumPrice = null;
+        if (!string.IsNullOrWhiteSpace(model.MaximumPrice))
         {
-            ModelState.AddModelError(nameof(CreateTrackedProductViewModel.ImageFile), "A imagem deve ter no máximo 5MB.");
+            if (!TryParseMoney(model.MaximumPrice, out var parsedMaximum) || parsedMaximum <= 0)
+            {
+                ModelState.AddModelError(nameof(TrackedProductPreferencesViewModel.MaximumPrice), "Informe um preço máximo válido.");
+            }
+            else
+            {
+                maximumPrice = parsedMaximum;
+            }
         }
 
-        var extension = Path.GetExtension(imageFile.FileName);
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedImageExtensions.Contains(extension))
+        if (model.AlertTrigger == PriceAlertTrigger.BelowMaximum && maximumPrice is null)
         {
-            ModelState.AddModelError(nameof(CreateTrackedProductViewModel.ImageFile), "Formatos permitidos: PNG, JPG, JPEG e WEBP.");
-        }
-    }
-
-    private async Task<string?> SaveImageAsync(IFormFile? imageFile, CancellationToken cancellationToken)
-    {
-        if (imageFile is null || imageFile.Length == 0)
-        {
-            return null;
+            ModelState.AddModelError(nameof(TrackedProductPreferencesViewModel.MaximumPrice), "Para este tipo de alerta, informe o preço máximo.");
         }
 
-        var extension = Path.GetExtension(imageFile.FileName).ToLowerInvariant();
-        if (!AllowedImageExtensions.Contains(extension))
+        if (maximumPrice is not null && targetPrice > maximumPrice)
         {
-            return null;
+            ModelState.AddModelError(nameof(TrackedProductPreferencesViewModel.MaximumPrice), "O preço máximo deve ser maior ou igual ao preço alvo.");
         }
 
-        var uploadsDirectory = Path.Combine(_environment.WebRootPath, "images", "products", "uploads");
-        Directory.CreateDirectory(uploadsDirectory);
+        if (!ModelState.IsValid)
+        {
+            return false;
+        }
 
-        var fileName = $"{Guid.NewGuid():N}{extension}";
-        var destinationPath = Path.Combine(uploadsDirectory, fileName);
+        draft = new TrackedProductPreferencesDraft
+        {
+            TargetPrice = targetPrice,
+            MaximumPrice = maximumPrice,
+            AlertTrigger = model.AlertTrigger,
+            EmailAlerts = model.EmailAlerts,
+            PushNotifications = model.PushNotifications,
+            DailySummary = model.DailySummary
+        };
 
-        await using var stream = new FileStream(destinationPath, FileMode.Create);
-        await imageFile.CopyToAsync(stream, cancellationToken);
-
-        return $"/images/products/uploads/{fileName}";
+        return true;
     }
 
     private static bool TryParseMoney(string? input, out decimal value)

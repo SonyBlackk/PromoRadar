@@ -12,18 +12,14 @@
     }
   }
 
-  function buildLabels(period, count, labels7d) {
-    if (period === "7D" && labels7d.length === count) {
-      return labels7d;
+  function buildLabels(period, count, labelsByPeriod) {
+    const periodLabels = labelsByPeriod && Array.isArray(labelsByPeriod[period]) ? labelsByPeriod[period] : [];
+    if (periodLabels.length === count) {
+      return periodLabels;
     }
 
-    if (period === "1A") {
-      const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-      return months.slice(0, count);
-    }
-
-    if (period === "Tudo") {
-      return Array.from({ length: count }, (_, index) => `T${index + 1}`);
+    if (periodLabels.length > count && count > 0) {
+      return periodLabels.slice(periodLabels.length - count);
     }
 
     return Array.from({ length: count }, (_, index) => `${index + 1}`);
@@ -36,7 +32,7 @@
     }
 
     const seriesByPeriod = safeParse(canvas.dataset.series || "{}", {});
-    const labels7d = safeParse(canvas.dataset.labels || "[]", []);
+    const labelsByPeriod = safeParse(canvas.dataset.labelSeries || "{}", {});
 
     const defaultPeriod = "7D";
     const defaultSeries = seriesByPeriod[defaultPeriod] || [];
@@ -49,7 +45,7 @@
     const chart = new Chart(context, {
       type: "line",
       data: {
-        labels: buildLabels(defaultPeriod, defaultSeries.length, labels7d),
+        labels: buildLabels(defaultPeriod, defaultSeries.length, labelsByPeriod),
         datasets: [
           {
             data: defaultSeries,
@@ -117,7 +113,7 @@
         periodButtons.forEach((item) => item.classList.remove("is-active"));
         button.classList.add("is-active");
 
-        chart.data.labels = buildLabels(period, selectedSeries.length, labels7d);
+        chart.data.labels = buildLabels(period, selectedSeries.length, labelsByPeriod);
         chart.data.datasets[0].data = selectedSeries;
         chart.update();
       });

@@ -6,20 +6,24 @@ namespace PromoRadar.Web.Services;
 public class PriceMonitoringJobService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IPriceProvider _priceProvider;
     private readonly ILogger<PriceMonitoringJobService> _logger;
 
-    public PriceMonitoringJobService(ApplicationDbContext dbContext, ILogger<PriceMonitoringJobService> logger)
+    public PriceMonitoringJobService(
+        ApplicationDbContext dbContext,
+        IPriceProvider priceProvider,
+        ILogger<PriceMonitoringJobService> logger)
     {
         _dbContext = dbContext;
+        _priceProvider = priceProvider;
         _logger = logger;
     }
 
     public async Task RunPriceScanAsync()
     {
-        var random = new Random(DateTime.UtcNow.Minute + DateTime.UtcNow.Hour * 100);
-
         var trackedProducts = await _dbContext.UserTrackedProducts
             .Include(x => x.Product)
+            .Where(x => x.IsActive)
             .OrderBy(x => x.CreatedAtUtc)
             .Take(6)
             .ToListAsync();
@@ -32,9 +36,7 @@ public class PriceMonitoringJobService
 
         foreach (var tracked in trackedProducts)
         {
-            var baseline = tracked.Product?.BaselinePrice ?? tracked.TargetPrice;
-            var adjustment = (decimal)(random.NextDouble() - 0.5) * 0.06m;
-            var scannedPrice = Math.Round(baseline * (1 + adjustment), 2, MidpointRounding.AwayFromZero);
+            var scannedPrice = await _priceProvider.GetCurrentPriceAsync(tracked);
 
             _dbContext.PriceSnapshots.Add(new Models.PriceSnapshot
             {

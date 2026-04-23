@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PromoRadar.Web.Models;
 
@@ -29,7 +30,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.Property(x => x.BaselinePrice).HasPrecision(12, 2);
             entity.Property(x => x.Name).HasMaxLength(180);
+            entity.Property(x => x.NormalizedName).HasMaxLength(180);
             entity.Property(x => x.Category).HasMaxLength(80);
+            entity.Property(x => x.NormalizedCategory).HasMaxLength(80);
+            entity.HasIndex(x => new { x.NormalizedName, x.NormalizedCategory });
         });
 
         builder.Entity<Store>(entity =>
@@ -43,11 +47,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<UserTrackedProduct>(entity =>
         {
             entity.Property(x => x.TargetPrice).HasPrecision(12, 2);
+            entity.Property(x => x.MaximumPrice).HasPrecision(12, 2);
             entity.HasIndex(x => new { x.ApplicationUserId, x.IsActive });
             entity.HasOne(x => x.ApplicationUser)
                 .WithMany()
                 .HasForeignKey(x => x.ApplicationUserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<IdentityUserLogin<string>>(entity =>
+        {
+            entity.Property(x => x.LoginProvider).HasMaxLength(128);
+            entity.Property(x => x.ProviderKey).HasMaxLength(128);
+        });
+
+        builder.Entity<IdentityUserToken<string>>(entity =>
+        {
+            entity.Property(x => x.LoginProvider).HasMaxLength(128);
+            entity.Property(x => x.Name).HasMaxLength(128);
         });
 
         builder.Entity<PriceSnapshot>(entity =>
@@ -65,4 +82,3 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         });
     }
 }
-
