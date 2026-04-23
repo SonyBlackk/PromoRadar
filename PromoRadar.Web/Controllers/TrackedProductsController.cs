@@ -64,10 +64,7 @@ public class TrackedProductsController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IWebHostEnvironment _environment;
 
-    public TrackedProductsController(
-        ApplicationDbContext dbContext,
-        UserManager<ApplicationUser> userManager,
-        IWebHostEnvironment environment)
+    public TrackedProductsController(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IWebHostEnvironment environment)
     {
         _dbContext = dbContext;
         _userManager = userManager;
@@ -143,14 +140,8 @@ public class TrackedProductsController : Controller
 
         return View(new TrackedProductPreferencesViewModel
         {
-            TargetPrice = preferencesDraft is not null
-                ? FormatMoney(preferencesDraft.TargetPrice)
-                : createDraft.TargetPrice.HasValue
-                    ? FormatMoney(createDraft.TargetPrice.Value)
-                    : string.Empty,
-            MaximumPrice = preferencesDraft?.MaximumPrice is decimal maximumPrice
-                ? FormatMoney(maximumPrice)
-                : null,
+            TargetPrice = preferencesDraft is not null ? FormatMoney(preferencesDraft.TargetPrice) : createDraft.TargetPrice.HasValue ? FormatMoney(createDraft.TargetPrice.Value) : string.Empty,
+            MaximumPrice = preferencesDraft?.MaximumPrice is decimal maximumPrice ? FormatMoney(maximumPrice) : null,
             AlertTrigger = preferencesDraft?.AlertTrigger ?? PriceAlertTrigger.BelowTarget,
             EmailAlerts = preferencesDraft?.EmailAlerts ?? true,
             PushNotifications = preferencesDraft?.PushNotifications ?? true,
@@ -233,9 +224,7 @@ public class TrackedProductsController : Controller
         }
 
         var storesDraft = GetDraftFromTempData<TrackedProductStoresDraft>(StoresDraftTempDataKey);
-        IEnumerable<string> selectedKeys = storesDraft?.SelectedStoreKeys is { Count: > 0 }
-            ? storesDraft.SelectedStoreKeys
-            : DefaultSelectedStores;
+        IEnumerable<string> selectedKeys = storesDraft?.SelectedStoreKeys is { Count: > 0 } ? storesDraft.SelectedStoreKeys : DefaultSelectedStores;
 
         return View(new CreateTrackedProductStep3ViewModel
         {
@@ -260,11 +249,8 @@ public class TrackedProductsController : Controller
             return RedirectToAction(nameof(Preferences));
         }
 
-        var selectedKeys = (model.Stores ?? [])
-            .Where(store => store.IsSelected)
-            .Select(store => store.Key)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
+        var selectedKeys = (model.Stores ?? []).Where(store => store.IsSelected).Select(store => store.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            
         model.Stores = BuildStoreSelectionItems(selectedKeys);
 
         if (!model.Stores.Any(store => store.IsSelected))
@@ -326,9 +312,7 @@ public class TrackedProductsController : Controller
         var normalizedCategory = createDraft.Category.Trim();
         var normalizedNameLower = normalizedName.ToLower();
         var normalizedCategoryLower = normalizedCategory.ToLower();
-        var productImageUrl = string.IsNullOrWhiteSpace(createDraft.ImageUrl)
-            ? "/images/products/default.svg"
-            : createDraft.ImageUrl;
+        var productImageUrl = string.IsNullOrWhiteSpace(createDraft.ImageUrl) ? "/images/products/default.svg" : createDraft.ImageUrl;
 
         var product = await _dbContext.Products.FirstOrDefaultAsync(
             productEntity =>

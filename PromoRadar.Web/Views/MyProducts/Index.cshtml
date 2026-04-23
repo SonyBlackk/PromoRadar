@@ -1,0 +1,123 @@
+@model MyProductsPageViewModel
+
+@{
+    ViewData["Title"] = Model.Title;
+    var successMessage = TempData["SuccessMessage"] as string;
+    var warningMessage = TempData["WarningMessage"] as string;
+}
+
+<div class="my-products-page">
+    <section class="my-products-header">
+        <div class="my-products-header-copy">
+            <h1>@Model.Title</h1>
+            <p>@Model.Subtitle</p>
+        </div>
+
+        <button type="button" class="btn my-products-export-btn">
+            <i class="bi bi-download"></i>
+            Exportar relatório
+        </button>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="module-feedback success my-products-feedback" role="status">
+            <i class="bi bi-check2-circle"></i>
+            <span>@successMessage</span>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(warningMessage))
+    {
+        <div class="module-feedback warning my-products-feedback" role="status">
+            <i class="bi bi-exclamation-circle"></i>
+            <span>@warningMessage</span>
+        </div>
+    }
+
+    <div class="module-feedback success my-products-feedback d-none" id="myProductsInlineNotice" role="status"></div>
+
+    <section class="my-products-kpi-grid">
+        @foreach (var card in Model.KpiCards)
+        {
+            <article class="my-products-kpi-card">
+                <div class="my-products-kpi-icon @card.AccentClass">
+                    <i class="bi @card.Icon"></i>
+                </div>
+                <div class="my-products-kpi-content">
+                    <h2>@card.Title</h2>
+                    <strong>@card.Value</strong>
+                    <p>@card.Subtitle</p>
+                </div>
+            </article>
+        }
+    </section>
+
+    <section class="panel-card my-products-table-card">
+        <form method="get" asp-action="Index" class="my-products-filter-row" id="myProductsFiltersForm" data-base-url="@Url.Action("Index", "MyProducts")">
+            <div class="my-products-filter-search">
+                <i class="bi bi-search"></i>
+                <input type="text"
+                       name="search"
+                       value="@Model.Search"
+                       placeholder="Buscar nas minhas mercadorias..."
+                       aria-label="Buscar mercadorias" />
+            </div>
+
+            <div class="my-products-select-wrap">
+                <i class="bi bi-shop-window"></i>
+                <select class="form-select my-products-filter-select js-auto-submit-filter" name="store" aria-label="Filtro de loja">
+                    <option value="">Todas as lojas</option>
+                    @foreach (var option in Model.StoreOptions)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == Model.SelectedStore)">
+                            @option.Label
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="my-products-select-wrap">
+                <i class="bi bi-grid"></i>
+                <select class="form-select my-products-filter-select js-auto-submit-filter" name="category" aria-label="Filtro de categoria">
+                    <option value="">Todas as categorias</option>
+                    @foreach (var option in Model.CategoryOptions)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == Model.SelectedCategory)">
+                            @option.Label
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="my-products-select-wrap">
+                <i class="bi bi-funnel"></i>
+                <select class="form-select my-products-filter-select js-auto-submit-filter" name="sort" aria-label="Ordenação">
+                    @foreach (var option in Model.SortOptions)
+                    {
+                        <option value="@option.Value" selected="@(option.Value == Model.SelectedSort)">
+                            @option.Label
+                        </option>
+                    }
+                </select>
+            </div>
+        </form>
+
+        <div class="my-products-table-head">
+            <span class="col-product">Produto</span>
+            <span class="col-price">Preço atual</span>
+            <span class="col-best">Melhor preço</span>
+            <span class="col-trend">Tendência</span>
+            <span class="col-actions visually-hidden">Ações</span>
+        </div>
+
+        <div id="myProductsTableContent">
+            @await Html.PartialAsync("_ProductsTableContent", Model)
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="~/js/my-products.js" asp-append-version="true"></script>
+}

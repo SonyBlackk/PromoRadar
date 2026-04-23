@@ -1,0 +1,197 @@
+@using System.Globalization
+@using System.Text.Json
+@model MyProductsPageViewModel
+
+@{
+    var ptBr = new CultureInfo("pt-BR");
+}
+
+<div class="my-products-table-body">
+    @if (Model.Products.Count == 0)
+    {
+        <div class="my-products-empty-state">
+            <i class="bi bi-box-seam"></i>
+            <strong>Nenhuma mercadoria encontrada</strong>
+            <p>Ajuste os filtros ou cadastre uma nova mercadoria para começar a acompanhar preços e receber alertas.</p>
+            <a asp-controller="TrackedProducts" asp-action="Create" class="btn btn-monitor">
+                Monitorar produto
+                <i class="bi bi-plus-lg"></i>
+            </a>
+        </div>
+    }
+    else
+    {
+        @foreach (var product in Model.Products)
+        {
+            var rowKey = product.ProductId.ToString("N");
+
+            <article class="my-products-table-row">
+                <div class="my-products-product-col">
+                    <div class="my-products-thumb">
+                        <img src="@product.ImageUrl" alt="@product.Name" loading="lazy" />
+                    </div>
+
+                    <div class="my-products-product-meta">
+                        <strong>@product.Name</strong>
+                        <p>@product.Brand</p>
+                        <span class="my-products-category-pill @product.CategoryClass">@product.Category</span>
+                    </div>
+                </div>
+
+                <div class="my-products-price-col">
+                    <strong>@product.CurrentPrice.ToString("C2", ptBr)</strong>
+                    <p>Meta: @product.TargetPrice.ToString("C2", ptBr)</p>
+                </div>
+
+                <div class="my-products-best-col">
+                    <div class="my-products-store-line">
+                        <span class="mp-store-logo mp-store-logo-@product.BestStoreLogoClass">@product.BestStoreLogoText</span>
+                        <span>@product.BestStoreName</span>
+                    </div>
+                    <strong>@product.BestPrice.ToString("C2", ptBr)</strong>
+                    <span class="my-products-variation-badge @product.VariationClass">@product.VariationLabel%</span>
+                </div>
+
+                <div class="my-products-trend-col">
+                    <canvas class="my-product-trend"
+                            data-points='@JsonSerializer.Serialize(product.TrendPoints)'
+                            data-color="@(product.IsTrendNegative ? "#f43f5e" : "#10b981")"></canvas>
+                </div>
+
+                <div class="my-products-actions-col">
+                    <details class="my-products-notify-menu">
+                        <summary class="my-products-action-btn" aria-label="Configurar canais de notificação">
+                            <i class="bi @(product.UnreadAlertsCount > 0 ? "bi-bell-fill" : "bi-bell")"></i>
+                            @if (product.UnreadAlertsCount > 0)
+                            {
+                                <span class="my-products-mini-badge">@product.UnreadAlertsCount</span>
+                            }
+                        </summary>
+
+                        <div class="my-products-notify-panel">
+                            <strong>Canais de notificação</strong>
+                            <p class="my-products-notify-product">@product.Name</p>
+
+                            <label class="my-products-notify-option" for="notifyEmail_@rowKey">
+                                <input type="checkbox" id="notifyEmail_@rowKey" checked />
+                                <span>E-mail</span>
+                            </label>
+
+                            <label class="my-products-notify-option" for="notifyWhatsapp_@rowKey">
+                                <input type="checkbox" id="notifyWhatsapp_@rowKey" />
+                                <span>WhatsApp</span>
+                            </label>
+
+                            <label class="my-products-notify-option" for="notifyPush_@rowKey">
+                                <input type="checkbox" id="notifyPush_@rowKey" checked />
+                                <span>Push no navegador</span>
+                            </label>
+
+                            <button type="button"
+                                    class="btn btn-monitor my-products-notify-save js-save-notify-channels"
+                                    data-product-name="@product.Name">
+                                Salvar canais
+                            </button>
+                        </div>
+                    </details>
+
+                    <details class="my-products-row-menu">
+                        <summary class="my-products-action-btn" aria-label="Mais ações">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </summary>
+
+                        <div class="my-products-row-dropdown">
+                            <a asp-controller="PriceHistory"
+                               asp-action="Index"
+                               class="my-products-row-option">
+                                <i class="bi bi-graph-up-arrow"></i>
+                                Ver histórico
+                            </a>
+                            <a asp-controller="Alerts"
+                               asp-action="Index"
+                               class="my-products-row-option">
+                                <i class="bi bi-bell"></i>
+                                Ver alertas
+                            </a>
+                            <form asp-action="RemoveProduct"
+                                  method="post"
+                                  onsubmit="return confirm('Tem certeza que deseja remover esta mercadoria do monitoramento?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="productId" value="@product.ProductId" />
+                                <input type="hidden" name="search" value="@Model.Search" />
+                                <input type="hidden" name="store" value="@Model.SelectedStore" />
+                                <input type="hidden" name="category" value="@Model.SelectedCategory" />
+                                <input type="hidden" name="sort" value="@Model.SelectedSort" />
+                                <input type="hidden" name="page" value="@Model.CurrentPage" />
+                                <button type="submit" class="my-products-row-option is-danger">
+                                    <i class="bi bi-trash"></i>
+                                    Remover mercadoria
+                                </button>
+                            </form>
+                        </div>
+                    </details>
+                </div>
+            </article>
+        }
+    }
+</div>
+
+<footer class="my-products-table-footer">
+    <p>Mostrando @Model.ShowingFrom a @Model.ShowingTo de @Model.TotalProducts produtos</p>
+
+    <nav class="my-products-pagination" aria-label="Paginação">
+        @if (Model.CurrentPage > 1)
+        {
+            <a asp-action="Index"
+               asp-route-search="@Model.Search"
+               asp-route-store="@Model.SelectedStore"
+               asp-route-category="@Model.SelectedCategory"
+               asp-route-sort="@Model.SelectedSort"
+               asp-route-page="@(Model.CurrentPage - 1)"
+               class="my-products-page-btn"
+               aria-label="Página anterior">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        }
+        else
+        {
+            <span class="my-products-page-btn is-disabled" aria-disabled="true">
+                <i class="bi bi-chevron-left"></i>
+            </span>
+        }
+
+        @for (var pageNumber = 1; pageNumber <= Model.TotalPages; pageNumber++)
+        {
+            <a asp-action="Index"
+               asp-route-search="@Model.Search"
+               asp-route-store="@Model.SelectedStore"
+               asp-route-category="@Model.SelectedCategory"
+               asp-route-sort="@Model.SelectedSort"
+               asp-route-page="@pageNumber"
+               class="my-products-page-btn @(pageNumber == Model.CurrentPage ? "is-active" : string.Empty)"
+               aria-current="@(pageNumber == Model.CurrentPage ? "page" : null)">
+                @pageNumber
+            </a>
+        }
+
+        @if (Model.CurrentPage < Model.TotalPages)
+        {
+            <a asp-action="Index"
+               asp-route-search="@Model.Search"
+               asp-route-store="@Model.SelectedStore"
+               asp-route-category="@Model.SelectedCategory"
+               asp-route-sort="@Model.SelectedSort"
+               asp-route-page="@(Model.CurrentPage + 1)"
+               class="my-products-page-btn"
+               aria-label="Próxima página">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        }
+        else
+        {
+            <span class="my-products-page-btn is-disabled" aria-disabled="true">
+                <i class="bi bi-chevron-right"></i>
+            </span>
+        }
+    </nav>
+</footer>
