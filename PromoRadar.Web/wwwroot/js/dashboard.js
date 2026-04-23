@@ -132,6 +132,11 @@
         return;
       }
 
+      const minPoint = Math.min(...points);
+      const maxPoint = Math.max(...points);
+      const range = Math.max(maxPoint - minPoint, Math.abs(maxPoint) * 0.02, 1);
+      const padding = range * 0.35;
+
       const color = canvas.closest(".suggestion-card")?.querySelector(".suggestion-badge")?.classList.contains("attention")
         ? "#f97316"
         : "#10b981";
@@ -152,8 +157,10 @@
               backgroundColor: gradient,
               fill: true,
               borderWidth: 2,
-              tension: 0.45,
-              pointRadius: 0
+              tension: 0.3,
+              cubicInterpolationMode: "monotone",
+              pointRadius: 0,
+              clip: 10
             }
           ]
         },
@@ -162,8 +169,12 @@
           maintainAspectRatio: false,
           plugins: { legend: { display: false }, tooltip: { enabled: false } },
           scales: {
-            x: { display: false },
-            y: { display: false }
+            x: { display: false, offset: true },
+            y: {
+              display: false,
+              min: minPoint - padding,
+              max: maxPoint + padding
+            }
           }
         }
       });

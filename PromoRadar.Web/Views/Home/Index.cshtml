@@ -13,7 +13,8 @@
     var downDeg = (downCount / (double)totalDay) * 360d;
     var upDeg = (upCount / (double)totalDay) * 360d;
     var upEnd = downDeg + upDeg;
-    var dayRingStyle = $"background: conic-gradient(#10b981 0deg {downDeg:F1}deg, #fb7185 {downDeg:F1}deg {upEnd:F1}deg, #94a3b8 {upEnd:F1}deg 360deg);";
+    var dayRingStyle = FormattableString.Invariant(
+        $"background: conic-gradient(#10b981 0deg {downDeg:F1}deg, #fb7185 {downDeg:F1}deg {upEnd:F1}deg, #94a3b8 {upEnd:F1}deg 360deg);");
 }
 
 <div class="dashboard-page">
@@ -83,7 +84,7 @@
             </div>
         </article>
 
-        <aside class="right-widgets">
+        <aside class="right-widgets right-widgets-top">
             <article class="panel-card widget-card">
                 <header>
                     <h3>Alertas recentes</h3>
@@ -111,6 +112,34 @@
                 </ul>
             </article>
 
+        </aside>
+
+        <section class="panel-card suggestions-block">
+            <header>
+                <h2>Sugestões com preço bom</h2>
+                <a asp-controller="PriceHistory" asp-action="Index">Ver todas</a>
+            </header>
+
+            <div class="suggestions-grid">
+                @foreach (var suggestion in Model.Suggestions)
+                {
+                    <article class="suggestion-card">
+                        <img src="@suggestion.ImageUrl" alt="@suggestion.Name" />
+
+                        <span class="suggestion-badge @suggestion.BadgeClass">@suggestion.BadgeText</span>
+
+                        <h3>@suggestion.Name</h3>
+                        <p class="store">@suggestion.StoreName</p>
+                        <strong>@suggestion.Price.ToString("C2", ptBr)</strong>
+                        <p class="comparison">@suggestion.ComparisonText</p>
+
+                        <canvas class="sparkline" data-points='@JsonSerializer.Serialize(suggestion.SparklinePoints)'></canvas>
+                    </article>
+                }
+            </div>
+        </section>
+
+        <aside class="right-widgets right-widgets-bottom">
             <article class="panel-card widget-card">
                 <header>
                     <h3>Resumo do dia</h3>
@@ -154,31 +183,6 @@
                 </ul>
             </article>
         </aside>
-    </section>
-
-    <section class="panel-card suggestions-block">
-        <header>
-            <h2>Sugestões com preço bom</h2>
-            <a asp-controller="PriceHistory" asp-action="Index">Ver todas</a>
-        </header>
-
-        <div class="suggestions-grid">
-            @foreach (var suggestion in Model.Suggestions)
-            {
-                <article class="suggestion-card">
-                    <img src="@suggestion.ImageUrl" alt="@suggestion.Name" />
-
-                    <span class="suggestion-badge @suggestion.BadgeClass">@suggestion.BadgeText</span>
-
-                    <h3>@suggestion.Name</h3>
-                    <p class="store">@suggestion.StoreName</p>
-                    <strong>@suggestion.Price.ToString("C2", ptBr)</strong>
-                    <p class="comparison">@suggestion.ComparisonText</p>
-
-                    <canvas class="sparkline" data-points='@JsonSerializer.Serialize(suggestion.SparklinePoints)'></canvas>
-                </article>
-            }
-        </div>
     </section>
 </div>
 
