@@ -1,10 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
 using PromoRadar.Web.Models;
 
 namespace PromoRadar.Web.Areas.Identity.Pages.Account;
@@ -22,7 +20,7 @@ public class ForgotPasswordModel : PageModel
     [BindProperty]
     public InputModel Input { get; set; } = new();
 
-    public string? ResetLink { get; set; }
+    public string? StatusMessage { get; set; }
 
     public class InputModel
     {
@@ -44,15 +42,14 @@ public class ForgotPasswordModel : PageModel
         }
 
         var user = await _userManager.FindByEmailAsync(Input.Email);
-        if (user is null)
+        if (user is not null)
         {
-            ModelState.AddModelError(string.Empty, "Se o e-mail existir, um link será exibido para redefinição.");
-            return Page();
+            _ = await _userManager.GeneratePasswordResetTokenAsync(user);
         }
 
-        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-        var encoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
-        ResetLink = Url.Page("/Account/ResetPassword", null, new { area = "Identity", code = encoded, email = user.Email }, Request.Scheme);
+        StatusMessage = "Se o e-mail existir, enviaremos instruções para redefinição de senha.";
+        ModelState.Clear();
+        Input = new InputModel();
 
         return Page();
     }
