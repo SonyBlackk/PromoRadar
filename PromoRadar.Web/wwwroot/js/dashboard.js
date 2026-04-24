@@ -123,15 +123,24 @@
   function initSparklines() {
     const sparklineElements = document.querySelectorAll("canvas.sparkline");
     sparklineElements.forEach((canvas) => {
-      const points = safeParse(canvas.dataset.points || "[]", []);
-      if (!points.length || !window.Chart) {
+      const parsedPoints = safeParse(canvas.dataset.points || "[]", []);
+      if (!parsedPoints.length || !window.Chart) {
+        return;
+      }
+
+      const points = parsedPoints
+        .map((point) => Number(point))
+        .filter((point) => Number.isFinite(point));
+
+      if (points.length < 2) {
         return;
       }
 
       const minPoint = Math.min(...points);
       const maxPoint = Math.max(...points);
       const range = Math.max(maxPoint - minPoint, Math.abs(maxPoint) * 0.02, 1);
-      const padding = range * 0.35;
+      const padding = range * 0.45;
+      const visualPadding = Math.max(range * 0.08, 2);
 
       const color = canvas.closest(".suggestion-card")?.querySelector(".suggestion-badge")?.classList.contains("attention")
         ? "#f97316"
@@ -156,20 +165,26 @@
               tension: 0.3,
               cubicInterpolationMode: "monotone",
               pointRadius: 0,
-              clip: 10
+              clip: false
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          layout: {
+            padding: {
+              top: 6,
+              bottom: 6
+            }
+          },
           plugins: { legend: { display: false }, tooltip: { enabled: false } },
           scales: {
             x: { display: false, offset: true },
             y: {
               display: false,
-              min: minPoint - padding,
-              max: maxPoint + padding
+              min: minPoint - padding - visualPadding,
+              max: maxPoint + padding + visualPadding
             }
           }
         }

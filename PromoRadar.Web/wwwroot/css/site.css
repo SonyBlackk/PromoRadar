@@ -1,4 +1,5 @@
-﻿:root {
+:root {
+  color-scheme: light;
   --bg-app: #f5f7fc;
   --bg-panel: #ffffff;
   --bg-sidebar: #f8f9fd;
@@ -21,6 +22,24 @@
   --blue: #0ea5e9;
   --blue-weak: #dbeafe;
   --rose: #fb7185;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-app: #070b14;
+  --bg-panel: #0f1728;
+  --bg-sidebar: #0b1322;
+  --bg-hover: #17243b;
+  --text-main: #e6edf8;
+  --text-muted: #9db0cd;
+  --text-soft: #8498b8;
+  --border-soft: #243550;
+  --shadow-card: 0 16px 35px rgba(2, 8, 23, 0.55);
+  --shadow-soft: 0 8px 20px rgba(2, 8, 23, 0.4);
+  --indigo-weak: rgba(91, 87, 243, 0.25);
+  --mint-weak: rgba(16, 185, 129, 0.2);
+  --orange-weak: rgba(249, 115, 22, 0.2);
+  --blue-weak: rgba(14, 165, 233, 0.2);
 }
 
 * {
@@ -61,10 +80,13 @@ a {
   border-right: 1px solid var(--border-soft);
   background: var(--bg-sidebar);
   padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .sidebar-content {
-  height: 100%;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -295,6 +317,12 @@ a {
 .icon-button:hover {
   color: var(--indigo);
   border-color: rgba(91, 87, 243, 0.4);
+}
+
+.icon-button.theme-toggle-active {
+  color: var(--indigo);
+  border-color: rgba(91, 87, 243, 0.48);
+  background: var(--indigo-weak);
 }
 
 .has-badge {
@@ -906,7 +934,7 @@ a {
 }
 
 .sparkline {
-  height: 42px !important;
+  height: 52px !important;
   width: 100% !important;
 }
 
@@ -3101,6 +3129,338 @@ a {
   color: #0369a1;
 }
 
+[data-theme="dark"] .app-sidebar {
+  background: #0b1322;
+}
+
+[data-theme="dark"] .topbar {
+  background: rgba(7, 11, 20, 0.92);
+}
+
+[data-theme="dark"] .brand-icon {
+  background: linear-gradient(135deg, #161f37, #192745);
+}
+
+[data-theme="dark"] .nav-group {
+  color: #6f83a3;
+}
+
+[data-theme="dark"] .nav-item {
+  color: #b9c8df;
+}
+
+[data-theme="dark"] .nav-item i {
+  color: #8fa3c4;
+}
+
+[data-theme="dark"] .nav-item:hover {
+  color: #e8eef9;
+}
+
+[data-theme="dark"] .nav-item.is-active {
+  background: rgba(91, 87, 243, 0.22);
+  color: #d2d0ff;
+  box-shadow: inset 0 0 0 1px rgba(113, 113, 255, 0.32);
+}
+
+[data-theme="dark"] .premium-card,
+[data-theme="dark"] .sidebar-user-card,
+[data-theme="dark"] .panel-card,
+[data-theme="dark"] .summary-card,
+[data-theme="dark"] .suggestion-card,
+[data-theme="dark"] .module-page-card,
+[data-theme="dark"] .create-stepper-card,
+[data-theme="dark"] .stores-table,
+[data-theme="dark"] .review-block,
+[data-theme="dark"] .review-panel,
+[data-theme="dark"] .my-products-kpi-card,
+[data-theme="dark"] .my-products-table-card,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .my-products-notify-panel,
+[data-theme="dark"] .my-products-row-dropdown {
+  background: #0f182a;
+  border-color: var(--border-soft);
+}
+
+[data-theme="dark"] .premium-card {
+  background: linear-gradient(180deg, #151d35 0%, #111a2e 100%);
+}
+
+[data-theme="dark"] .premium-card h2 {
+  color: #d1d6ff;
+}
+
+[data-theme="dark"] .premium-card p,
+[data-theme="dark"] .sidebar-user-card p,
+[data-theme="dark"] .sidebar-user-card small {
+  color: #98accb;
+}
+
+[data-theme="dark"] .avatar-circle {
+  background: rgba(91, 87, 243, 0.24);
+  color: #d5d3ff;
+}
+
+[data-theme="dark"] .topbar-search i,
+[data-theme="dark"] .my-products-filter-search i,
+[data-theme="dark"] .my-products-select-wrap > i,
+[data-theme="dark"] .stores-search-wrap i {
+  color: #8ea4c6;
+}
+
+[data-theme="dark"] .topbar-search input,
+[data-theme="dark"] .icon-button,
+[data-theme="dark"] .my-products-export-btn,
+[data-theme="dark"] .my-products-action-btn,
+[data-theme="dark"] .my-products-page-btn,
+[data-theme="dark"] .my-products-filter-search input,
+[data-theme="dark"] .my-products-filter-select,
+[data-theme="dark"] .form-control-premium,
+[data-theme="dark"] .stores-search-input,
+[data-theme="dark"] .auth-card .form-control,
+[data-theme="dark"] .btn-back-step {
+  background: #0b1424;
+  border-color: #314662;
+  color: #d7e3f7;
+}
+
+[data-theme="dark"] .btn-back-step:hover,
+[data-theme="dark"] .btn-back-step:focus {
+  background: #121f35;
+  border-color: #3f5a7d;
+  color: #eef3ff;
+}
+
+[data-theme="dark"] .topbar-search input::placeholder,
+[data-theme="dark"] .my-products-filter-search input::placeholder,
+[data-theme="dark"] .auth-card .form-control::placeholder {
+  color: #8297b8;
+}
+
+[data-theme="dark"] .icon-button.theme-toggle-active {
+  color: #d6d4ff;
+  border-color: rgba(120, 114, 255, 0.62);
+  background: rgba(91, 87, 243, 0.3);
+}
+[data-theme="dark"] .icon-button:hover,
+[data-theme="dark"] .my-products-export-btn:hover,
+[data-theme="dark"] .my-products-export-btn:focus,
+[data-theme="dark"] .my-products-action-btn:hover,
+[data-theme="dark"] .my-products-action-btn:focus,
+[data-theme="dark"] .my-products-page-btn:hover:not(.is-active):not(.is-disabled),
+[data-theme="dark"] .my-products-page-btn:focus-visible:not(.is-active):not(.is-disabled) {
+  background: #13223a;
+  border-color: rgba(91, 87, 243, 0.55);
+}
+
+[data-theme="dark"] .stores-table-head,
+[data-theme="dark"] .my-products-table-head {
+  background: #111c30;
+  border-color: #243754;
+  color: #92a7ca;
+}
+
+[data-theme="dark"] .store-row,
+[data-theme="dark"] .my-products-table-row,
+[data-theme="dark"] .my-products-empty-state,
+[data-theme="dark"] .my-products-filter-row,
+[data-theme="dark"] .my-products-table-footer,
+[data-theme="dark"] .review-actions-row,
+[data-theme="dark"] .review-data-list,
+[data-theme="dark"] .review-preferences-panel hr {
+  border-color: #243754;
+}
+
+[data-theme="dark"] .my-products-table-row:hover,
+[data-theme="dark"] .store-row:hover {
+  background: #121f35;
+}
+
+[data-theme="dark"] .featured-image-wrap,
+[data-theme="dark"] .suggestion-card img,
+[data-theme="dark"] .my-products-thumb,
+[data-theme="dark"] .review-product-image-wrap,
+[data-theme="dark"] .review-inline-image,
+[data-theme="dark"] .upload-dropzone,
+[data-theme="dark"] .secure-note,
+[data-theme="dark"] .review-product-highlight,
+[data-theme="dark"] .review-ready-note,
+[data-theme="dark"] .period-filters {
+  border-color: #2a3e5d;
+  background: #111d31;
+}
+
+[data-theme="dark"] .upload-dropzone:hover,
+[data-theme="dark"] .upload-dropzone.is-dragover {
+  background: #192740;
+}
+
+[data-theme="dark"] .review-ready-panel {
+  background: #111d31;
+}
+
+[data-theme="dark"] .review-rocket-visual {
+  background: radial-gradient(circle at top, #1b2741 0%, #16243e 58%, #14223a 100%);
+}
+
+[data-theme="dark"] .step-number {
+  background: #1a2740;
+  color: #98abd0;
+}
+
+[data-theme="dark"] .step-connector {
+  background: #2a3d5a;
+}
+
+[data-theme="dark"] .alert-trigger-card {
+  background: #111d31;
+  border-color: #2d405f;
+}
+
+[data-theme="dark"] .alert-trigger-card:hover {
+  background: #16243b;
+  border-color: #3b5378;
+}
+
+[data-theme="dark"] .alert-trigger-card.is-active {
+  background: rgba(91, 87, 243, 0.2);
+}
+
+[data-theme="dark"] .alert-trigger-indicator {
+  border-color: #6f84a7;
+}
+
+[data-theme="dark"] .toggle-slider {
+  background: #2b3e5c;
+}
+
+[data-theme="dark"] .store-check-ui {
+  border-color: #6a7e9f;
+}
+
+[data-theme="dark"] .state-pill.off {
+  background: #1e2f48;
+  color: #99accb;
+}
+
+[data-theme="dark"] .summary-card h2,
+[data-theme="dark"] .summary-card p,
+[data-theme="dark"] .featured-store-row,
+[data-theme="dark"] .featured-prices p,
+[data-theme="dark"] .featured-status small,
+[data-theme="dark"] .period-btn,
+[data-theme="dark"] .alert-list p,
+[data-theme="dark"] .alert-list small,
+[data-theme="dark"] .day-ring span,
+[data-theme="dark"] .day-legend li,
+[data-theme="dark"] .suggestion-card .store,
+[data-theme="dark"] .suggestion-card .comparison,
+[data-theme="dark"] .module-page-card p,
+[data-theme="dark"] .create-breadcrumb,
+[data-theme="dark"] .create-breadcrumb a,
+[data-theme="dark"] .create-stepper-item span,
+[data-theme="dark"] .create-form-card > header p,
+[data-theme="dark"] .field-block small,
+[data-theme="dark"] .helper-list p,
+[data-theme="dark"] .secure-note p,
+[data-theme="dark"] .preferences-form-card > header p,
+[data-theme="dark"] .preferences-group > p,
+[data-theme="dark"] .alert-trigger-copy small,
+[data-theme="dark"] .alert-setting-row p,
+[data-theme="dark"] .stores-form-card > header p,
+[data-theme="dark"] .review-form-card > header p,
+[data-theme="dark"] .store-type-col,
+[data-theme="dark"] .stores-empty-state,
+[data-theme="dark"] .review-block dt,
+[data-theme="dark"] .review-store-list small,
+[data-theme="dark"] .review-stage-header p,
+[data-theme="dark"] .review-product-highlight p,
+[data-theme="dark"] .review-data-list dd,
+[data-theme="dark"] .review-metric-row,
+[data-theme="dark"] .review-alert-list li,
+[data-theme="dark"] .review-store-lines li,
+[data-theme="dark"] .review-ready-panel > p,
+[data-theme="dark"] .review-ready-note p,
+[data-theme="dark"] .my-products-header-copy p,
+[data-theme="dark"] .my-products-kpi-content h2,
+[data-theme="dark"] .my-products-product-meta p,
+[data-theme="dark"] .my-products-store-line,
+[data-theme="dark"] .my-products-table-footer p,
+[data-theme="dark"] .my-products-notify-product,
+[data-theme="dark"] .my-products-notify-option,
+[data-theme="dark"] .my-products-row-option,
+[data-theme="dark"] .my-products-empty-state p,
+[data-theme="dark"] .auth-brand-box p,
+[data-theme="dark"] .auth-brand-box li,
+[data-theme="dark"] .auth-card p.subtitle,
+[data-theme="dark"] .auth-card .form-floating > label {
+  color: #9db0cd;
+}
+
+[data-theme="dark"] .featured-prices strong,
+[data-theme="dark"] .my-products-product-meta strong,
+[data-theme="dark"] .my-products-price-col strong,
+[data-theme="dark"] .my-products-best-col strong,
+[data-theme="dark"] .my-products-notify-panel > strong,
+[data-theme="dark"] .review-block dd,
+[data-theme="dark"] .review-data-list dt,
+[data-theme="dark"] .alert-trigger-copy strong,
+[data-theme="dark"] .store-identification strong {
+  color: #e6edf8;
+}
+
+[data-theme="dark"] .review-data-list dd a,
+[data-theme="dark"] .auth-card .auth-links a {
+  color: #9fabff;
+}
+
+[data-theme="dark"] .period-btn.is-active,
+[data-theme="dark"] .my-products-page-btn.is-active {
+  background: rgba(91, 87, 243, 0.22);
+  color: #cfd2ff;
+}
+
+[data-theme="dark"] .my-products-page-btn.is-disabled {
+  color: #637898;
+}
+
+[data-theme="dark"] .my-products-row-option:hover,
+[data-theme="dark"] .my-products-row-option:focus {
+  background: #18263f;
+  color: #e6edf8;
+}
+
+[data-theme="dark"] .my-products-row-option.is-danger:hover,
+[data-theme="dark"] .my-products-row-option.is-danger:focus {
+  background: rgba(185, 28, 28, 0.22);
+}
+
+[data-theme="dark"] .my-products-notify-menu[open] > .my-products-action-btn,
+[data-theme="dark"] .my-products-row-menu[open] > .my-products-action-btn {
+  border-color: rgba(91, 87, 243, 0.55);
+  background: #13223a;
+  color: #c7cfff;
+}
+
+[data-theme="dark"] .day-ring::before {
+  background: #0f182a;
+}
+
+[data-theme="dark"] .store-bar {
+  background: #253a58;
+}
+
+[data-theme="dark"] .auth-body {
+  background: #070b14;
+}
+
+[data-theme="dark"] .auth-brand-panel {
+  background: radial-gradient(circle at top right, #141f37 0%, #0f1728 45%, #0a1220 100%);
+}
+
+[data-theme="dark"] .create-breadcrumb a:hover {
+  color: #a7b7ff;
+}
 @media (max-width: 1460px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3433,3 +3793,32 @@ a {
     min-width: 0;
   }
 }
+
+@media (max-height: 860px) {
+  .app-sidebar {
+    padding: 16px;
+  }
+
+  .sidebar-content {
+    gap: 14px;
+  }
+
+  .sidebar-brand {
+    padding: 4px 6px;
+  }
+
+  .premium-card {
+    padding: 14px;
+  }
+
+  .premium-card p {
+    margin-bottom: 10px;
+    font-size: 0.82rem;
+  }
+
+  .sidebar-user-card {
+    padding: 10px;
+  }
+}
+
+
